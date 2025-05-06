@@ -131,6 +131,21 @@ h2 {
 }
 
 
+/* Keep generic list item styling if desired */
+.calendar-day ul li {
+    margin-bottom: 2px;
+    padding: 2px 4px; /* Slightly more padding */
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* border-left: 3px solid transparent; Remove if JS handles all borders */
+}
+
+
+
+
+
 button#reviewButton, button#submitButton {
     display: block;
     width: 100%;
