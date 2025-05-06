@@ -4,12 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Firebase Configuration (Same as participant script.js) ---
     // IMPORTANT: Replace with your actual Firebase config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.firebasestorage.app", // Or .appspot.com - check your config!
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+          apiKey: "AIzaSyA2wAZ65IDnHC4GzQh1dR9BVkgp_5Ooz6E",
+          authDomain: "scheduler-47c5c.firebaseapp.com",
+          projectId: "scheduler-47c5c",
+          storageBucket: "scheduler-47c5c.firebasestorage.app",
+          messagingSenderId: "114842587009",
+          appId: "1:114842587009:web:ec49cc7039f6a833746280",
+          measurementId: "G-L8BPGHKVQJ"
       // measurementId: "G-XXXXXXXXXX" // Optional
     };
     const FIRESTORE_COLLECTION = "schedules";
