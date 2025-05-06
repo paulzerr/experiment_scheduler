@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- General Configuration ---
     const SESSION1_LOOKAHEAD_DAYS = 14;
     const FOLLOWUP_DURATION_WEEKS = 3;
-    const REQUIRED_FOLLOWUPS = 1;
-    const REQUIRED_BACKUPS = 1;
+    const REQUIRED_FOLLOWUPS = 5;
+    const REQUIRED_BACKUPS = 2;
     const BACKUP_WINDOW_DAYS = 7;
     const MAX_CONCURRENT_DEVICES = 15;
     const FIRESTORE_COLLECTION = "schedules";
