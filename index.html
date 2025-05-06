@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiment Scheduler</title>
+    <!-- jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Experiment Scheduler</h1>
+
+        <div id="participantInfo" class="info-box hidden">
+            <!-- Participant ID will be shown here by JS -->
+        </div>
+
+        <div id="errorMessages" class="error-box hidden">
+             <!-- Error messages appear here -->
+        </div>
+
+        <div class="warning-box">
+            <strong>Note:</strong> Select your dates carefully. Your selections will be saved after clicking "Submit". A PDF summary will be provided upon successful submission. Availability is based on current submissions but confirmation is required.
+        </div>
+
+        <!-- Status box for loading availability -->
+        <div id="loadingStatus" class="status-box hidden">Loading availability...</div>
+
+        <div id="schedulerContent" class="hidden">
+            <h2>Step 1: Select First Experiment Session</h2>
+            <p>Select one date for your first session from the available dates below (next 2 weeks, considering availability).</p>
+            <div id="session1Calendar" class="calendar">
+                <p>Loading dates...</p>
+            </div>
+
+            <div id="followUpSection" class="hidden">
+                <h2>Step 2: Select 14 Follow-up Nights</h2>
+                <p>
+                    Select <strong>14</strong> more nights from the 3 weeks after your first session.
+                    (<span id="followUpCount">0</span>/14 selected)
+                </p>
+                <div id="followUpCalendar" class="calendar">
+                    <!-- Dates will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div id="backupSection" class="hidden">
+                <h2>Step 3: Select 3 Backup Nights</h2>
+                <p>
+                    Select <strong>3</strong> backup nights from the 7 days following your last selected follow-up night.
+                    (<span id="backupCount">0</span>/3 selected)
+                </p>
+                <div id="backupCalendar" class="calendar">
+                    <!-- Dates will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <button id="reviewButton" disabled>Review Selections</button>
+
+            <div id="summarySection" class="hidden">
+                <h2>Summary of Your Selections</h2>
+                <pre id="logOutput"></pre>
+                <p>Please verify the details above. If correct, click Submit.</p>
+                <button id="submitButton">Submit Selections</button>
+                <p id="submissionStatus" class="status-box hidden"></p>
+                <p id="pdfStatus" class="status-box hidden"></p> <!-- For PDF status -->
+            </div>
+        </div> <!-- end schedulerContent -->
+
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+    <!-- Your Custom Script -->
+    <script src="script.js"></script>
+</body>
+</html>
