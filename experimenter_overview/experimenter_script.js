@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     submittedAt: submittedAt
                 };
             });
-            
+
             console.log(`Fetched ${allFetchedSchedules.length} schedules.`);
             if (scheduleTableContainer) renderSchedulesTable(allFetchedSchedules);
             if (calendarDaysDiv) renderCalendarView(currentDisplayDate.getUTCFullYear(), currentDisplayDate.getUTCMonth());
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         schedules.forEach(schedule => {
             const submittedAtDisplay = schedule.submittedAt ? formatDateForDisplay(schedule.submittedAt, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            
+
             const followUps = schedule.followUpDates || [];
             const backups = schedule.backupDates || [];
 
