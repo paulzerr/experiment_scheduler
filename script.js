@@ -30,8 +30,7 @@ const submissionStatusP = document.getElementById('submissionStatus');
 const pdfStatusP = document.getElementById('pdfStatus');
 
 // --- State Variables ---
-let participantId = null;
-let participantStartDate = null;
+let participantInfo = null; // Will hold { id, link_id, schedule_from }
 let selectedSessions = []; // All sessions in a single array
 let selectedBackups = [];
 let allBookedDates = new Set(); // Use a Set for efficient lookup of booked dates (YYYY-MM-DD strings)
@@ -39,32 +38,40 @@ let availableSlots = 0; // Number of available slots for concurrent sessions
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    participantId = getParticipantId();
-    
-    if (!participantId) {
-        showError("Participant ID not found in URL. Please use the link provided.");
-        loadingStatusDiv.classList.add('hidden');
-        return;
-    }
-    
-    // Check if participant ID is valid
-    if (!isValidParticipant(participantId)) {
-        showError("Invalid participant ID. Please contact the experimenters.");
-        loadingStatusDiv.classList.add('hidden');
-        return;
-    }
-    
-    // Check if participant has a specific start date
-    participantStartDate = getParticipantStartDate(participantId);
-    
-    participantInfoDiv.textContent = `Participant ID: ${participantId}`;
-    participantInfoDiv.classList.remove('hidden');
     initializeScheduler();
 });
 
-function getParticipantId() {
+async function getParticipantInfo() {
     const params = new URLSearchParams(window.location.search);
-    return params.get('pid');
+    const linkId = params.get('pid');
+    if (!linkId) {
+        throw new Error("Participant link ID not found in URL. Please use the link provided.");
+    }
+
+    const { data, error } = await supabaseClient
+        .from('schedules')
+        .select('id, link_id, schedule_from, submission_timestamp')
+        .eq('link_id', linkId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error fetching participant data:', error);
+        throw new Error('Could not verify participant information.');
+    }
+
+    if (!data) {
+        throw new Error('This participation link is not valid. Please contact the experimenters.');
+    }
+    
+    if (data.submission_timestamp) {
+        throw new Error('You have already submitted your schedule. Please contact experimenters if you need to make changes.');
+    }
+
+    return {
+        id: data.id,
+        link_id: data.link_id,
+        schedule_from: data.schedule_from // YYYY-MM-DD
+    };
 }
 
 async function initializeScheduler() {
@@ -73,6 +80,11 @@ async function initializeScheduler() {
     schedulerContentDiv.classList.add('hidden');
 
     try {
+        participantInfo = await getParticipantInfo();
+        
+        participantInfoDiv.textContent = `Participant ID: ${participantInfo.link_id}`;
+        participantInfoDiv.classList.remove('hidden');
+
         await fetchBookedDates(); // Fetch dates booked by other participants
         populateSession1Calendar();
         schedulerContentDiv.classList.remove('hidden');
@@ -87,22 +99,6 @@ async function initializeScheduler() {
 // --- Data Fetching (Supabase) ---
 async function fetchBookedDates() {
     allBookedDates.clear();
-    
-    // First check if this participant has already submitted
-    const { data: existingSubmission, error: checkError } = await supabaseClient
-        .from('schedules')
-        .select('id')
-        .eq('participant_id', participantId)
-        .maybeSingle();
-        
-    if (checkError) {
-        console.error('Error checking existing submission:', checkError);
-        throw new Error('Could not check for existing submissions.');
-    }
-    
-    if (existingSubmission) {
-        throw new Error('You have already submitted your schedule. Please contact experimenters if you need to make changes.');
-    }
     
     // Fetch all booked dates to calculate availability
     const { data, error } = await supabaseClient
@@ -159,8 +155,8 @@ function populateSession1Calendar() {
     
     // Start date is either the participant's specified start date or tomorrow
     let startDate;
-    if (participantStartDate) {
-        startDate = new Date(participantStartDate + "T00:00:00");
+    if (participantInfo.schedule_from) {
+        startDate = new Date(participantInfo.schedule_from + "T00:00:00");
     } else {
         startDate = getNextWorkDay(new Date());
     }
@@ -413,7 +409,7 @@ reviewButton.addEventListener('click', () => {
     selectedSessions.sort(); // Ensure sorted for display
     selectedBackups.sort();   // Ensure sorted for display
 
-    logOutputPre.textContent = `Participant ID: ${participantId}\n\n` +
+    logOutputPre.textContent = `Participant ID: ${participantInfo.link_id}\n\n` +
         `Experiment Sessions (${selectedSessions.length}):\n` +
         selectedSessions.map(d => `  - ${formatDateForDisplay(d)}`).join('\n') + `\n\n` +
         `Backup Sessions (${selectedBackups.length}):\n` +
@@ -436,40 +432,25 @@ submitButton.addEventListener('click', async () => {
     selectedBackups.sort();
 
     const scheduleData = {
-        participant_id: participantId,
+        // The participant_id in the database is the link_id
+        participant_id: participantInfo.link_id,
         session_dates: selectedSessions, // Array of YYYY-MM-DD strings
         backup_dates: selectedBackups, // Array of YYYY-MM-DD strings
         submission_timestamp: new Date().toISOString() // UTC timestamp
     };
 
     try {
-        // Check for existing submission by this participant ID BEFORE attempting insert
-        // This is good practice if you have a unique constraint on participant_id
-        const { data: existing, error: fetchError } = await supabaseClient
-            .from('schedules')
-            .select('id')
-            .eq('participant_id', participantId)
-            .maybeSingle(); // Returns one row or null, not an array
-
-        if (fetchError) {
-            console.error('Error checking existing schedule:', fetchError);
-            showError('Submission failed: Could not verify existing entries. Please try again.', submissionStatusP);
-            submitButton.disabled = false;
-            reviewButton.disabled = false;
-            return;
-        }
-
-        if (existing) {
-            showError('You have already submitted your schedule. Please contact experimenters if you need to make changes.', submissionStatusP);
-            disableAllDateButtons(); // Prevent re-submission
-            return;
-        }
-
-        // Proceed with insert if no existing schedule for this participant
+        // The logic to check for existing submissions is now in getParticipantInfo.
+        // We now use an UPDATE operation instead of INSERT.
         const { data, error } = await supabaseClient
             .from('schedules')
-            .insert([scheduleData])
-            .select(); // .select() is optional, returns the inserted row(s)
+            .update({
+                session_dates: scheduleData.session_dates,
+                backup_dates: scheduleData.backup_dates,
+                submission_timestamp: scheduleData.submission_timestamp
+            })
+            .eq('link_id', participantInfo.link_id)
+            .select();
 
         if (error) {
             console.error('Error submitting schedule to Supabase:', error);
@@ -538,7 +519,7 @@ function generateAndDownloadPDF(scheduleData) {
         doc.setFontSize(18);
         doc.text("Experiment Schedule Summary", 14, 22);
         doc.setFontSize(12);
-        doc.text(`Participant ID: ${scheduleData.participant_id}`, 14, 32);
+        doc.text(`Participant ID: ${participantInfo.link_id}`, 14, 32);
 
         let yPos = 45;
         doc.setFontSize(11);

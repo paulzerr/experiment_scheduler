@@ -22,8 +22,6 @@ const SCHEDULER_CONFIG = {
     FOLLOW_UP_WINDOW_DAYS: 21, // 3 weeks after first session for remaining sessions
     BACKUP_WINDOW_DAYS: 7,    // 7 days after last regular session for backups
     
-    // Path to participant IDs file
-    PARTICIPANTS_FILE_PATH: 'participants.js'
 };
 
 // Export the configuration
