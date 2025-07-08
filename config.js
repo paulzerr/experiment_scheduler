@@ -1,0 +1,36 @@
+// config.js - Configuration settings for the Experiment Scheduler
+
+// Supabase Configuration
+const SUPABASE_CONFIG = {
+    URL: 'https://xiupbovpolvimeayboig.supabase.co',
+    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpdXBib3Zwb2x2aW1lYXlib2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1MTQ5ODMsImV4cCI6MjA1NzA5MDk4M30.r-b6VnDBSB6D_LYj0CF1fdiQ66eJVGzakGguSV7619U'
+};
+
+// Scheduler Configuration
+const SCHEDULER_CONFIG = {
+    // Total number of experiment sessions to schedule
+    TOTAL_SESSIONS: 15,
+    
+    // Number of backup sessions
+    NUM_BACKUP_SESSIONS: 3,
+    
+    // Maximum number of concurrent sessions (based on available devices)
+    MAX_CONCURRENT_SESSIONS: 15,
+    
+    // Time windows for scheduling (in days)
+    SESSION1_WINDOW_DAYS: 14, // Next 2 weeks for first available session
+    FOLLOW_UP_WINDOW_DAYS: 21, // 3 weeks after first session for remaining sessions
+    BACKUP_WINDOW_DAYS: 7,    // 7 days after last regular session for backups
+    
+    // Path to participant IDs file
+    PARTICIPANTS_FILE_PATH: 'participants.js'
+};
+
+// Export the configuration
+if (typeof module !== 'undefined' && module.exports) {
+    // For Node.js environment
+    module.exports = { SUPABASE_CONFIG, SCHEDULER_CONFIG };
+} else {
+    // For browser environment
+    // Configuration will be available globally
+}
