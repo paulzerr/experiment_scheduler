@@ -14,63 +14,55 @@
         <h1>Lucid Dreaming At Home Experiment Scheduler</h1>
 
         <div id="participantInfo" class="info-box hidden">
-            <!-- Participant ID will be shown here by JS -->
         </div>
-
         <div id="errorMessages" class="error-box hidden">
-             <!-- Error messages appear here -->
         </div>
 
         <div class="warning-box">
-            <strong>Note:</strong> Please select your preferred experiment dates. <br><br>
-            [1] First select the instruction session date. This will also be the first experiment session. This should be within the next weeks, which is important for us to keep our data collection schedule. If it is absolutely impossible for you to schedule the sessions in this timeframe, send us an email and we figure it out. <br><br>
-            [2] Next, select 14 additional experiment sessions from the available dates (15 sessions in total during the three weeks following the first session). The experiment takes place while you sleep, so account for potential sleep disturbance. For example: if you have exams, it is best not to schedule an experiment session on the night before. <br><br>
-            [3] Finally, select 3 additional "backup dates", which will be used in case of equipment failure, etc. <br><br>
-            <strong>Note:</strong> Dates may be unavailable if the maximum number of concurrent sessions has been reached. We have a limited number of devices available for experiments.<br><br>
-            Once you hit "Submit" your chosen dates will be sent to the experimenters. If you made a mistake, please contact the experimenters.
-
-            Your selections will be saved after clicking "Submit". A PDF summary will be provided upon successful submission. Availability is based on current submissions but confirmation is required.
+            <strong>Please select your experiment dates below.</strong> <br><br>
+            <strong>[Step 1]</strong> Select the instruction session date. This will also be the first experiment night. <br><br>
+            <strong>[Step 2]</strong> Select a timeslot for the instruction session, which will take about one hour. <br><br>
+            <strong>[Step 3]</strong> Select 14 additional experiment session from the available dates (15 sessions in total during the three weeks following the first session). The experiment takes place while you sleep, so account for potential sleep disturbance. For example: if you have exams, it is best not to schedule an experiment session on the night before. Please contact us if you can't schedule the sessions in this timeframe. <br><br>
+            <strong>[Step 4]</strong> Select 3 additional backup dates, which will be used in case of equipment failure, etc. <br><br>
+            Note: Some dates may be unavailable if all hardware is in use. <br><br>
+            Once you click "Submit" your chosen dates will be saved and sent to the experimenters. It is not possible to change the dates after this step. A PDF summary will be provided for download after successful submission. 
         </div>
 
         <!-- Status box for loading availability -->
         <div id="loadingStatus" class="status-box hidden">Loading availability...</div>
 
         <div id="schedulerContent" class="hidden">
-            <h2>Step 1: Select First Experiment Session</h2>
-            <p>Select one date for your first session from the available dates below (next 2 weeks, considering availability).</p>
+            <h2>Step 1: Select the instruction session date and first experiment night:</h2>
             <div id="session1Calendar" class="calendar">
                 <p>Loading dates...</p>
             </div>
 
+            <div id="timeslotSection" class="hidden">
+                <h2>Step 2: Select a time for the instruction session:</h2>
+                <p id="selectedDateDisplay"></p>
+                <div id="timeslotButtons" class="timeslot-container">
+                </div>
+            </div>
+
             <div id="followUpSection" class="hidden">
-                <h2>Step 2: Select 14 Follow-up Nights</h2>
-                <p>
-                    Select <strong>14</strong> more nights from the 3 weeks after your first session.
-                    (<span id="followUpCount">0</span>/14 selected)
-                </p>
+                <h2>Step 3: Select 14 more experiment nights: <span id="followUpCount">0</span>/14</h2>
                 <div id="followUpCalendar" class="calendar">
-                    <!-- Dates will be populated by JavaScript -->
                 </div>
             </div>
 
             <div id="backupSection" class="hidden">
-                <h2>Step 3: Select 3 Backup Nights</h2>
-                <p>
-                    Select <strong>3</strong> backup nights from the 7 days following your last selected follow-up night.
-                    (<span id="backupCount">0</span>/3 selected)
-                </p>
+                <h2>Step 4: Select 3 backup nights: <span id="backupCount">0</span>/3</h2>
                 <div id="backupCalendar" class="calendar">
-                    <!-- Dates will be populated by JavaScript -->
                 </div>
             </div>
 
             <button id="reviewButton" disabled>Review Selections</button>
 
             <div id="summarySection" class="hidden">
-                <h2>Summary of Your Selections</h2>
+                <h2>Summary of your selected dates</h2>
                 <pre id="logOutput"></pre>
-                <p>Please verify the details above. If correct, click Submit.</p>
-                <button id="submitButton">Submit Selections</button>
+                <p>Please verify the details above and submit.</p>
+                <button id="submitButton">Submit experiment dates</button>
                 <p id="submissionStatus" class="status-box hidden"></p>
                 <p id="pdfStatus" class="status-box hidden"></p> <!-- For PDF status -->
             </div>
@@ -78,89 +70,11 @@
 
     </div>
 
-    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Configuration and Participants -->
     <script src="config.js"></script>
-    <script src="participants.js"></script>
-
-    <!--
-        TODO: In script.js, replace Firebase initialization and Firestore calls with Supabase:
-
-        1. Initialize Supabase client (typically at the start of your script):
-           const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Get from Supabase project settings
-           const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Get from Supabase project settings
-           const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        2. Fetching availability (replace Firestore queries for existing schedules):
-           - You'll need to query a 'schedules' table in Supabase to determine already booked/unavailable slots.
-           - Example:
-             async function getBookedDates() {
-                 const { data, error } = await supabase
-                     .from('schedules') // Assuming your table is named 'schedules'
-                     .select('session1_date, follow_up_dates, backup_dates'); // Select relevant date fields
-                 if (error) {
-                     console.error('Error fetching booked dates:', error);
-                     return [];
-                 }
-                 // Process 'data' to create a list of all booked dates to disable them in calendars
-                 let allBookedDates = [];
-                 data.forEach(schedule => {
-                     if(schedule.session1_date) allBookedDates.push(schedule.session1_date);
-                     if(schedule.follow_up_dates) allBookedDates.push(...schedule.follow_up_dates);
-                     if(schedule.backup_dates) allBookedDates.push(...schedule.backup_dates);
-                 });
-                 return allBookedDates.map(d => new Date(d).toISOString().split('T')[0]); // Normalize date format
-             }
-           - Use the result of `getBookedDates` in your calendar generation logic to mark dates as unavailable.
-
-        3. Submitting selections (replace Firestore `add()` or `set()`):
-           - When the user submits their selections, insert a new record into the 'schedules' table.
-           - Example (inside your submit function):
-             const participantId = /* get participant ID */;
-             const session1Date = /* get selected session 1 date */;
-             const followUpDates = /* get array of selected follow-up dates */;
-             const backupDates = /* get array of selected backup dates */;
-
-             const { data, error } = await supabase
-                 .from('schedules')
-                 .insert([
-                     {
-                         participant_id: participantId,
-                         session1_date: session1Date, // Ensure this is in ISO string format or Supabase date format
-                         follow_up_dates: followUpDates, // Array of ISO date strings
-                         backup_dates: backupDates, // Array of ISO date strings
-                         submission_timestamp: new Date().toISOString()
-                         // Add other fields like status if needed
-                     }
-                 ])
-                 .select(); // Optionally .select() to get the inserted row back
-
-             if (error) {
-                 console.error('Error submitting schedule:', error);
-                 // Handle submission error (e.g., display message to user)
-             } else {
-                 console.log('Schedule submitted successfully:', data);
-                 // Handle successful submission (e.g., show summary, generate PDF)
-             }
-
-        4. Data Structure in Supabase:
-           - Create a table (e.g., `schedules`) in your Supabase project.
-           - Suggested columns:
-             - `id` (uuid, primary key, auto-generated is good)
-             - `participant_id` (text or uuid, ensure this is captured, perhaps from URL params or a login system if you add one)
-             - `session1_date` (date or timestamp)
-             - `follow_up_dates` (jsonb - to store an array of dates)
-             - `backup_dates` (jsonb - to store an array of dates)
-             - `submission_timestamp` (timestamp with time zone, e.g., `DEFAULT now()`)
-             - `status` (text - e.g., 'pending_confirmation', 'confirmed', optional)
-           - Make sure column types for dates in Supabase (e.g., `date` or `timestamp`) match the format you're sending. Storing dates as ISO 8601 strings (YYYY-MM-DD) is often robust. JSONB is good for arrays of dates.
-
-        5. Participant ID:
-           - The current HTML has `<div id="participantInfo">`. Ensure `script.js` populates this correctly.
-           - The participant ID is crucial for associating schedules. Determine how it's being sourced (e.g., URL parameter `?pid=XYZ`) and ensure it's included in the data sent to Supabase.
-    -->
+    <script src="dateManager.js"></script>
+    <script src="sessionManager.js"></script>
+    <script src="pdfGenerator.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

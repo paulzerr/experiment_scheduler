@@ -130,6 +130,45 @@ h2 {
     border-color: #ced4da;
 }
 
+/* Time slot button styling */
+.timeslot-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.timeslot-button {
+    padding: 10px 15px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    color: #333;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    font-size: 0.9em;
+    font-weight: 500;
+    min-width: 70px;
+    text-align: center;
+}
+
+.timeslot-button:hover:not(:disabled) {
+    background-color: #e9e9e9;
+    border-color: #bbb;
+}
+
+.timeslot-button.selected {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.timeslot-button:disabled {
+    background-color: #e9ecef;
+    color: #adb5bd;
+    cursor: not-allowed;
+    border-color: #ced4da;
+}
 
 /* Keep generic list item styling if desired */
 .calendar-day ul li {

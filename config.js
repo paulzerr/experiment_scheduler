@@ -15,20 +15,34 @@ const SCHEDULER_CONFIG = {
     NUM_BACKUP_SESSIONS: 3,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 15,
+    MAX_CONCURRENT_SESSIONS: 1,
     
     // Time windows for scheduling (in days)
-    SESSION1_WINDOW_DAYS: 14, // Next 2 weeks for first available session
+    SESSION1_WINDOW_DAYS: 7, // Next 2 weeks for first available session
     FOLLOW_UP_WINDOW_DAYS: 21, // 3 weeks after first session for remaining sessions
     BACKUP_WINDOW_DAYS: 7,    // 7 days after last regular session for backups
     
+    // Minimum consecutive available days required for experiment sessions
+    MIN_AVAILABLE_DAYS: 28, // Ensure 28 consecutive days are available for follow-up sessions
+    
+    // Time slot options for instruction sessions
+    TIME_SLOTS: [
+        '11:00',
+        '12:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+        '17:00',
+        '18:00'
+    ],
+    
+    // Blocked dates - no instruction sessions may be scheduled on these dates
+    // Blocked dates are converted to a Set for efficient O(1) lookups.
+    BLOCKED_DATES: new Set([
+        '2025-07-11',
+        '2025-08-13',
+        '2025-08-12',
+        '2025-08-30',
+    ])
 };
-
-// Export the configuration
-if (typeof module !== 'undefined' && module.exports) {
-    // For Node.js environment
-    module.exports = { SUPABASE_CONFIG, SCHEDULER_CONFIG };
-} else {
-    // For browser environment
-    // Configuration will be available globally
-}
