@@ -41,15 +41,20 @@ document.addEventListener('DOMContentLoaded', initializeScheduler);
 
 async function initializeScheduler() {
     showLoading('Loading availability...');
-    
-    participantInfo = await getParticipantInfo();
-    elements.participantInfo.textContent = `Participant ID: ${participantInfo.participant_id}`;
-    elements.participantInfo.classList.remove('hidden');
+    try {
+        participantInfo = await getParticipantInfo();
+        elements.participantInfo.textContent = `Participant ID: ${participantInfo.participant_id}`;
+        elements.participantInfo.classList.remove('hidden');
 
-    await populateSession1Calendar();
-    
-    hideLoading();
-    elements.schedulerContent.classList.remove('hidden');
+        await populateSession1Calendar();
+        
+        hideLoading();
+        elements.schedulerContent.classList.remove('hidden');
+    } catch (error) {
+        console.error("Error initializing scheduler:", error);
+        showError(error.message || "Failed to load availability. Please try refreshing the page.");
+        hideLoading();
+    }
 }
 
 async function getParticipantInfo() {
@@ -238,6 +243,7 @@ function createDateButton(date, container, type) {
 }
 
 function handleDateSelection(date, type, button) {
+    clearError();
     let result;
 
     switch (type) {
@@ -257,21 +263,32 @@ function handleDateSelection(date, type, button) {
 
         case 'followUp':
             result = sessionManager.selectFollowUpSession(date);
-            button.classList.toggle('selected', !result.deselected);
-            updateFollowUpCount();
-            if (sessionManager.selectedSessions.length === SCHEDULER_CONFIG.TOTAL_SESSIONS) {
-                populateBackupCalendar();
+            if (result.success) {
+                button.classList.toggle('selected', !result.deselected);
+                updateFollowUpCount();
+                updateFollowUpSectionTitle();
+
+                if (sessionManager.selectedSessions.length === SCHEDULER_CONFIG.TOTAL_SESSIONS) {
+                    populateBackupCalendar();
+                } else {
+                    // Hide if we drop below the required number
+                    elements.backupSection.classList.add('hidden');
+                    sessionManager.selectedBackups = [];
+                    updateBackupCount();
+                }
             } else {
-                elements.backupSection.classList.add('hidden');
-                sessionManager.selectedBackups = [];
-                updateBackupCount();
+                showError(result.error);
             }
             break;
 
         case 'backup':
             result = sessionManager.selectBackupSession(date);
-            button.classList.toggle('selected', !result.deselected);
-            updateBackupCount();
+             if (result.success) {
+                button.classList.toggle('selected', !result.deselected);
+                updateBackupCount();
+            } else {
+                showError(result.error);
+            }
             break;
     }
 
@@ -279,6 +296,7 @@ function handleDateSelection(date, type, button) {
 }
 
 function handleTimeslotSelection(timeSlot, button) {
+    clearError();
     elements.timeslotButtons.querySelectorAll('.timeslot-button').forEach(btn => btn.classList.remove('selected'));
     button.classList.add('selected');
     sessionManager.setTimeslot(timeSlot);
@@ -348,28 +366,26 @@ elements.submitButton.addEventListener('click', async () => {
         submission_timestamp: new Date().toISOString()
     };
 
-    const { error } = await supabaseClient
-        .from('schedules')
-        .update(submissionData)
-        .eq('link_id', participantInfo.link_id);
+    try {
+        const { error } = await supabaseClient
+            .from('schedules')
+            .update(submissionData)
+            .eq('link_id', participantInfo.link_id);
 
-    if (error) {
-        console.error('Submission error:', error);
-        // Re-enable buttons on failure
+        if (error) throw error;
+
+        setSubmissionStatus('Schedule submitted successfully!', 'success');
+        disableAllDateButtons();
+        generateAndDownloadPDF({
+            ...submissionData,
+            participant_id: participantInfo.link_id
+        }, participantInfo.participant_id);
+    } catch (err) {
+        console.error('Submission error:', err);
+        setSubmissionStatus('Submission failed. Please try again.', 'error');
         elements.submitButton.disabled = false;
         elements.reviewButton.disabled = false;
-        throw error;
     }
-
-    elements.submissionStatus.textContent = 'Schedule submitted successfully!';
-    elements.submissionStatus.className = 'status-box success';
-    elements.submissionStatus.classList.remove('hidden');
-    disableAllDateButtons();
-    
-    generateAndDownloadPDF({
-        ...submissionData,
-        participant_id: participantInfo.link_id
-    }, participantInfo.participant_id);
 });
 
 // --- Utility Functions ---
@@ -381,6 +397,23 @@ function showLoading(message) {
 
 function hideLoading() {
     elements.loadingStatus.classList.add('hidden');
+}
+
+function showError(message, element = elements.errorMessages) {
+    element.textContent = message;
+    element.classList.remove('hidden');
+}
+
+function clearError(element = elements.errorMessages) {
+    element.classList.add('hidden');
+    element.textContent = '';
+}
+
+function setSubmissionStatus(message, type) {
+    const element = elements.submissionStatus;
+    element.textContent = message;
+    element.className = `status-box ${type}`;
+    element.classList.remove('hidden');
 }
 
 function disableAllDateButtons() {
