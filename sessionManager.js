@@ -38,7 +38,7 @@ class SessionManager {
      * @returns {boolean} True if available for an instruction session.
      */
     isDateAvailableForInstruction(date) {
-        return this.isDateAvailable(date) && !DateManager.isDateBlocked(date);
+        return this.isDateAvailable(date) && !DateManager.isDateBlocked(date) && !DateManager.isWeekend(date);
     }
 
     /**

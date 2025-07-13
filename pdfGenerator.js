@@ -80,8 +80,8 @@ function generateAndDownloadPDF(scheduleData, participantId) {
 
     yPos = Math.max(yPos, 250);
     if (yPos > 270) { doc.addPage(); yPos = 20;}
-    doc.text("Please keep this PDF for your records.", 14, yPos);
-    doc.text("Contact the experimenters if you have any questions: luciddreamingathome@donders.ru.nl", 14, yPos + 6);
+    doc.text("Please keep this PDF for your records.", 14, yPos + 6);
+    doc.text("Contact the experimenters if you have any questions: luciddreamingathome@donders.ru.nl", 14, yPos + 12);
 
     doc.save(`Experiment_Schedule_${participantId}.pdf`);
 

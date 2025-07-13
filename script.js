@@ -376,6 +376,7 @@ elements.submitButton.addEventListener('click', async () => {
 
         setSubmissionStatus('Schedule submitted successfully!', 'success');
         disableAllDateButtons();
+        disableAllTimeslotButtons();
         generateAndDownloadPDF({
             ...submissionData,
             participant_id: participantInfo.link_id
@@ -418,4 +419,8 @@ function setSubmissionStatus(message, type) {
 
 function disableAllDateButtons() {
     document.querySelectorAll('.date-button').forEach(button => button.disabled = true);
+}
+
+function disableAllTimeslotButtons() {
+    document.querySelectorAll('.timeslot-button').forEach(button => button.disabled = true);
 }

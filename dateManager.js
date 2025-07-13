@@ -132,6 +132,19 @@ class DateManager {
     }
 
     /**
+     * Checks if a given date is a weekend (Saturday or Sunday).
+     * @param {Date} date The date to check.
+     * @returns {boolean} True if the date is a weekend, false otherwise.
+     */
+    static isWeekend(date) {
+        if (!date || isNaN(date.getTime())) {
+            return false; // Or throw an error, depending on desired strictness
+        }
+        const dayOfWeek = date.getUTCDay(); // 0 for Sunday, 6 for Saturday
+        return dayOfWeek === 0 || dayOfWeek === 6;
+    }
+
+    /**
      * Finds the first valid start date for an experiment based on a set of rules.
      * It pre-calculates the status of each day in a search range and then finds a valid slot.
      * @param {Date} searchStartDate - The date to start searching from.
@@ -153,7 +166,7 @@ class DateManager {
             
             statusMap.push({
                 date: new Date(currentDate),
-                isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+                isWeekend: this.isWeekend(currentDate),
                 isGloballyBlocked: this.isDateBlocked(currentDate),
                 isFull: (dateCountMap.get(dateStr) || 0) >= MAX_CONCURRENT_SESSIONS,
             });
