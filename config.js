@@ -18,7 +18,7 @@ const SCHEDULER_CONFIG = {
     MAX_CONCURRENT_SESSIONS: 9,
     
     // Time windows for scheduling (in days)
-    SESSION1_WINDOW_DAYS: 7, // Next 2 weeks for first available session
+    SESSION1_WINDOW_DAYS: 14, // Next 2 weeks for first available session
     FOLLOW_UP_WINDOW_DAYS: 21, // 3 weeks after first session for remaining sessions
     BACKUP_WINDOW_DAYS: 7,    // 7 days after last regular session for backups
     
@@ -27,14 +27,8 @@ const SCHEDULER_CONFIG = {
     
     // Time slot options for instruction sessions
     TIME_SLOTS: [
-        '11:00',
-        '12:00',
-        '13:00',
-        '14:00',
         '15:00',
-        '16:00',
         '17:00',
-        '18:00'
     ],
     
     // Blocked dates - no instruction sessions may be scheduled on these dates
