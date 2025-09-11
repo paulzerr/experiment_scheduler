@@ -27,6 +27,8 @@ const SCHEDULER_CONFIG = {
     
     // Time slot options for instruction sessions
     TIME_SLOTS: [
+        '11:00',
+        '13:00',
         '15:00',
         '17:00',
     ],
