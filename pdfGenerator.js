@@ -28,7 +28,7 @@ function generateAndDownloadPDF(scheduleData, participantId) {
     yPos += 10;
 
     doc.setFont(undefined, 'bold');
-    doc.text("Instruction session:", 14, yPos);
+    doc.text("Instruction session (and first experiment night):", 14, yPos);
     yPos += 6;
     doc.setFont(undefined, 'normal');
     doc.text(`${scheduleData.instruction_timeslot}, ${DateManager.formatForDisplay(DateManager.toUTCDate(firstSessionDate))}`, 14, yPos);
