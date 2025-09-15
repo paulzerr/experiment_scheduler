@@ -87,13 +87,10 @@ async function loadDataAndRenderViews() {
         return dateA - dateB;
     });
 
-    // Pass all data to the table view, which knows how to handle dropped-out participants
-    renderTableView(sortedData);
-
-    // Filter out dropped-out participants for the calendar view only
     allSchedulesData = sortedData.filter(schedule =>
         !OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id)
     );
+    renderTableView(allSchedulesData); // Use the filtered data
     renderCalendarView();
 }
 
