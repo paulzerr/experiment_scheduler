@@ -186,12 +186,12 @@ function renderTableSection(container, schedules, today, noSchedulesMessage) {
     summaryTableHTML += `</tbody></table>`;
 
     let detailTableHTML = `
-        <h3>Session list</h3>
+        <h3>All Sessions</h3>
         <table>
             <thead>
                 <tr>
                     <th>Participant ID</th>
-                    <th>Past Sessions</th>
+                    <th>All Sessions</th>
                     <th>Backup Sessions</th>
                 </tr>
             </thead>

@@ -15,7 +15,6 @@ function initializeSupabase() {
 }
 // --- DOM Elements ---
 const scheduleTableContainer = document.getElementById('scheduleTableContainer');
-const pastScheduleTableContainer = document.getElementById('pastScheduleTableContainer');
 const calendarLoadingMessage = document.getElementById('calendarLoading');
 const calendarTitleSpan = document.getElementById('calendarTitle');
 const calendarDaysContainer = document.getElementById('calendarDays');
@@ -90,149 +89,119 @@ async function loadDataAndRenderViews() {
     allSchedulesData = sortedData.filter(schedule =>
         !OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id)
     );
-    renderTableView(allSchedulesData); // Use the filtered data
+    renderTableView(sortedData);
     renderCalendarView();
 }
 
 // --- Table View Rendering ---
 function renderTableView(schedules) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const upcomingSchedules = [];
-    const pastSchedules = [];
-
-    schedules.forEach(schedule => {
-        const allSessionDates = (schedule.session_dates || []).concat(schedule.backup_dates || []);
-        if (allSessionDates.length === 0) {
-            upcomingSchedules.push(schedule); // Assume upcoming if no dates
-            return;
-        }
-
-        const lastDate = new Date(Math.max.apply(null, allSessionDates.map(d => new Date(d))));
-        if (lastDate < today) {
-            pastSchedules.push(schedule);
-        } else {
-            upcomingSchedules.push(schedule);
-        }
-    });
-
-    renderTableSection(scheduleTableContainer, upcomingSchedules, today, "No upcoming schedules.");
-    renderTableSection(pastScheduleTableContainer, pastSchedules, today, "No past schedules.");
-}
-
-function renderTableSection(container, schedules, today, noSchedulesMessage) {
     if (schedules.length === 0) {
-        container.innerHTML = `<p class="no-schedules-message">${noSchedulesMessage}</p>`;
+        scheduleTableContainer.innerHTML = '<p class="no-schedules-message">No schedules submitted yet.</p>';
         return;
     }
 
-    // Sort schedules within the section by first session date
-    schedules.sort((a, b) => {
-        const dateA = a.session_dates?.[0] ? new Date(a.session_dates[0]) : 0;
-        const dateB = b.session_dates?.[0] ? new Date(b.session_dates[0]) : 0;
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-        return dateA - dateB;
-    });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    let summaryTableHTML = `
-        <h3>Key Sessions Summary</h3>
-        <table class="summary-table">
-            <thead>
-                <tr>
-                    <th>Participant ID</th>
-                    <th>Instruction Timeslot</th>
-                    <th>First Session</th>
-                    <th>Last Session</th>
-                    <th>Last Backup</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    let activeSchedules = [];
+    let pastSchedules = [];
 
     schedules.forEach(schedule => {
-        const isDroppedOut = OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id);
-        const participantId = `${schedule.participant_id || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
-        
-        const firstSessionDateStr = schedule.session_dates?.[0];
-        const firstSessionDate = firstSessionDateStr ? new Date(firstSessionDateStr) : null;
         const lastBackupDateStr = schedule.backup_dates?.[schedule.backup_dates.length - 1];
         const lastBackupDate = lastBackupDateStr ? new Date(lastBackupDateStr) : null;
-
-        let rowClass = '';
-        if (isDroppedOut) {
-            rowClass = 'dropped-out';
-        } else if (lastBackupDate && lastBackupDate < today) {
-            rowClass = 'past-session';
+        if (lastBackupDate && lastBackupDate < today) {
+            pastSchedules.push(schedule);
+        } else {
+            activeSchedules.push(schedule);
         }
-
-        const firstSessionClass = firstSessionDate && firstSessionDate < today ? 'past-date' : '';
-        const lastSessionDate = schedule.session_dates?.length > 0 ? new Date(schedule.session_dates[schedule.session_dates.length - 1]) : null;
-        const lastSessionClass = lastSessionDate && lastSessionDate < today ? 'past-date' : '';
-        const lastBackupClass = lastBackupDate && lastBackupDate < today ? 'past-date' : '';
-        const instructionClass = firstSessionDate && firstSessionDate < today ? 'past-date' : '';
-
-        summaryTableHTML += `
-            <tr class="${rowClass}">
-                <td class="uid-column">${participantId}</td>
-                <td class="instruction-timeslot ${instructionClass}">${schedule.instruction_timeslot || 'N/A'}</td>
-                <td class="first-session ${firstSessionClass}">${firstSessionDate ? DateManager.formatForDisplay(firstSessionDate) : 'N/A'}</td>
-                <td class="last-session ${lastSessionClass}">${lastSessionDate ? DateManager.formatForDisplay(lastSessionDate) : 'N/A'}</td>
-                <td class="last-backup ${lastBackupClass}">${lastBackupDate ? DateManager.formatForDisplay(lastBackupDate) : 'N/A'}</td>
-            </tr>
-        `;
     });
-    summaryTableHTML += `</tbody></table>`;
 
-    let detailTableHTML = `
-        <h3>Session list</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Participant ID</th>
-                    <th>Past Sessions</th>
-                    <th>Backup Sessions</th>
+    const generateTable = (title, scheduleList, isPast) => {
+        let summaryTableHTML = `
+            <h3>${title}</h3>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Participant ID</th>
+                        <th>Instruction Timeslot</th>
+                        <th>First Session</th>
+                        <th>Last Session</th>
+                        <th>Last Backup</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        scheduleList.forEach(schedule => {
+            const isDroppedOut = OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id);
+            const participantId = `${schedule.participant_id || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
+            
+            const firstSessionDateStr = schedule.session_dates?.[0];
+            const firstSessionDate = firstSessionDateStr ? new Date(firstSessionDateStr) : null;
+            const lastBackupDateStr = schedule.backup_dates?.[schedule.backup_dates.length - 1];
+            const lastBackupDate = lastBackupDateStr ? new Date(lastBackupDateStr) : null;
+
+            let rowClass = '';
+            if (isDroppedOut) {
+                rowClass = 'dropped-out';
+            } else if (firstSessionDate && firstSessionDate < today) {
+                rowClass = 'past-intake';
+            }
+            if (lastBackupDate && lastBackupDate < today) {
+                rowClass = 'past-session';
+            }
+
+
+            summaryTableHTML += `
+                <tr class="${rowClass}">
+                    <td class="uid-column">${participantId}</td>
+                    <td class="instruction-timeslot">${schedule.instruction_timeslot || 'N/A'}</td>
+                    <td class="first-session">${firstSessionDate ? DateManager.formatForDisplay(firstSessionDate) : 'N/A'}</td>
+                    <td class="last-session">${schedule.session_dates?.length > 0 ? DateManager.formatForDisplay(new Date(schedule.session_dates[schedule.session_dates.length - 1])) : 'N/A'}</td>
+                    <td class="last-backup">${lastBackupDate ? DateManager.formatForDisplay(lastBackupDate) : 'N/A'}</td>
                 </tr>
-            </thead>
-            <tbody>
-    `;
-    schedules.forEach(schedule => {
-        const isDroppedOut = OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id);
-        const participantId = `${schedule.participant_id || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
-        
-        const lastBackupDateStr = schedule.backup_dates?.[schedule.backup_dates.length - 1];
-        const lastBackupDate = lastBackupDateStr ? new Date(lastBackupDateStr) : null;
-        let rowClass = '';
-        if (isDroppedOut) {
-            rowClass = 'dropped-out';
-        } else if (lastBackupDate && lastBackupDate < today) {
-            rowClass = 'past-session';
-        }
+            `;
+        });
+        summaryTableHTML += `</tbody></table>`;
 
-        detailTableHTML += `
-            <tr class="${rowClass}">
-                <td class="uid-column">${participantId}</td>
-                <td class="sessions-cell">
-                    ${schedule.session_dates?.map((d, i, arr) => {
-                        let className = '';
-                        if (i === 0) className = 'first-session';
-                        else if (i === arr.length - 1) className = 'last-session';
-                        return `<div class="${className}">${DateManager.formatForDisplay(new Date(d))}</div>`;
-                    }).join('') || 'None'}
-                </td>
-                <td class="backup-cell">
-                    ${schedule.backup_dates?.map((d, i, arr) => {
-                        const className = i === arr.length - 1 ? 'last-backup' : 'backup';
-                        return `<div class="${className}">${DateManager.formatForDisplay(new Date(d))}</div>`;
-                    }).join('') || 'None'}
-                </td>
-            </tr>
+        let detailTableHTML = `
+            <h4>All Sessions</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Participant ID</th>
+                        <th>All Sessions</th>
+                        <th>Backup Sessions</th>
+                    </tr>
+                </thead>
+                <tbody>
         `;
-    });
-    detailTableHTML += `</tbody></table>`;
+        scheduleList.forEach(schedule => {
+            const isDroppedOut = OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id);
+            const participantId = `${schedule.participant_id || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
+            detailTableHTML += `
+                <tr>
+                    <td class="uid-column">${participantId}</td>
+                    <td class="sessions-cell">
+                        ${schedule.session_dates?.map(d => `<div>${DateManager.formatForDisplay(new Date(d))}</div>`).join('') || 'None'}
+                    </td>
+                    <td class="backup-cell">
+                        ${schedule.backup_dates?.map(d => `<div>${DateManager.formatForDisplay(new Date(d))}</div>`).join('') || 'None'}
+                    </td>
+                </tr>
+            `;
+        });
+        detailTableHTML += `</tbody></table>`;
 
-    container.innerHTML = summaryTableHTML + '<hr>' + detailTableHTML;
+        return summaryTableHTML + detailTableHTML;
+    };
+
+    let finalHTML = generateTable('Active Sessions', activeSchedules, false);
+    if (pastSchedules.length > 0) {
+        finalHTML += '<hr><h3>Past Sessions</h3>' + generateTable('Past Sessions', pastSchedules, true);
+    }
+
+    scheduleTableContainer.innerHTML = finalHTML;
 }
 
 

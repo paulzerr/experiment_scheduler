@@ -15,7 +15,6 @@ function initializeSupabase() {
 }
 // --- DOM Elements ---
 const scheduleTableContainer = document.getElementById('scheduleTableContainer');
-const pastScheduleTableContainer = document.getElementById('pastScheduleTableContainer');
 const calendarLoadingMessage = document.getElementById('calendarLoading');
 const calendarTitleSpan = document.getElementById('calendarTitle');
 const calendarDaysContainer = document.getElementById('calendarDays');
@@ -90,51 +89,19 @@ async function loadDataAndRenderViews() {
     allSchedulesData = sortedData.filter(schedule =>
         !OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id)
     );
-    renderTableView(allSchedulesData); // Use the filtered data
+    renderTableView(sortedData);
     renderCalendarView();
 }
 
 // --- Table View Rendering ---
 function renderTableView(schedules) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const upcomingSchedules = [];
-    const pastSchedules = [];
-
-    schedules.forEach(schedule => {
-        const allSessionDates = (schedule.session_dates || []).concat(schedule.backup_dates || []);
-        if (allSessionDates.length === 0) {
-            upcomingSchedules.push(schedule); // Assume upcoming if no dates
-            return;
-        }
-
-        const lastDate = new Date(Math.max.apply(null, allSessionDates.map(d => new Date(d))));
-        if (lastDate < today) {
-            pastSchedules.push(schedule);
-        } else {
-            upcomingSchedules.push(schedule);
-        }
-    });
-
-    renderTableSection(scheduleTableContainer, upcomingSchedules, today, "No upcoming schedules.");
-    renderTableSection(pastScheduleTableContainer, pastSchedules, today, "No past schedules.");
-}
-
-function renderTableSection(container, schedules, today, noSchedulesMessage) {
     if (schedules.length === 0) {
-        container.innerHTML = `<p class="no-schedules-message">${noSchedulesMessage}</p>`;
+        scheduleTableContainer.innerHTML = '<p class="no-schedules-message">No schedules submitted yet.</p>';
         return;
     }
 
-    // Sort schedules within the section by first session date
-    schedules.sort((a, b) => {
-        const dateA = a.session_dates?.[0] ? new Date(a.session_dates[0]) : 0;
-        const dateB = b.session_dates?.[0] ? new Date(b.session_dates[0]) : 0;
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-        return dateA - dateB;
-    });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     let summaryTableHTML = `
         <h3>Key Sessions Summary</h3>
@@ -186,12 +153,12 @@ function renderTableSection(container, schedules, today, noSchedulesMessage) {
     summaryTableHTML += `</tbody></table>`;
 
     let detailTableHTML = `
-        <h3>Session list</h3>
+        <h3>All Sessions</h3>
         <table>
             <thead>
                 <tr>
                     <th>Participant ID</th>
-                    <th>Past Sessions</th>
+                    <th>All Sessions</th>
                     <th>Backup Sessions</th>
                 </tr>
             </thead>
@@ -232,7 +199,7 @@ function renderTableSection(container, schedules, today, noSchedulesMessage) {
     });
     detailTableHTML += `</tbody></table>`;
 
-    container.innerHTML = summaryTableHTML + '<hr>' + detailTableHTML;
+    scheduleTableContainer.innerHTML = summaryTableHTML + '<hr>' + detailTableHTML;
 }
 
 

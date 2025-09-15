@@ -186,7 +186,7 @@ function renderTableSection(container, schedules, today, noSchedulesMessage) {
     summaryTableHTML += `</tbody></table>`;
 
     let detailTableHTML = `
-        <h3>Session list</h3>
+        <h3>Active Sessions</h3>
         <table>
             <thead>
                 <tr>

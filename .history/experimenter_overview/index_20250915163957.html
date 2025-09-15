@@ -20,9 +20,8 @@
         .first-session { font-weight: bold; color: #1e88e5; }
         .last-session { font-weight: bold; color: #f57c00; }
         .last-backup { font-weight: bold; color: #f57c00; }
-        .summary-table .dropped-out, .summary-table .past-session { color: #999; font-weight: normal; }
-        .summary-table .dropped-out *, .summary-table .past-session * { color: #999 !important; font-weight: normal !important; }
-        .past-date { color: #999 !important; font-weight: normal !important; }
+        .dropped-out, .past-session, .past-intake { color: #999; font-weight: normal; }
+        .dropped-out *, .past-session *, .past-intake * { color: #999 !important; font-weight: normal !important; }
         
         /* Summary table styling */
         .summary-table { margin-bottom: 20px; }
@@ -117,17 +116,10 @@
         </div>
 
         <hr style="margin-top: 30px;">
-        <h2>Upcoming Sessions</h2>
+        <h2>Table View</h2>
         <div id="scheduleTableContainer">
             <p class="loading-message">Loading schedules table...</p>
             <!-- Table will be generated here -->
-        </div>
-
-        <hr style="margin-top: 30px;">
-        <h2>Past Sessions</h2>
-        <div id="pastScheduleTableContainer">
-            <p class="loading-message">Loading past schedules...</p>
-            <!-- Table for past sessions will be generated here -->
         </div>
     </div>
 
