@@ -80,15 +80,6 @@ async function loadDataAndRenderViews() {
         !OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id)
     );
 
-    // Sort by the first session date
-    filteredData.sort((a, b) => {
-        const dateA = a.session_dates?.[0] ? new Date(a.session_dates[0]) : 0;
-        const dateB = b.session_dates?.[0] ? new Date(b.session_dates[0]) : 0;
-        if (!dateA) return 1; // Push schedules without dates to the end
-        if (!dateB) return -1;
-        return dateA - dateB;
-    });
-
     allSchedulesData = filteredData;
     renderTableView(allSchedulesData);
     renderCalendarView();
@@ -195,7 +186,6 @@ function renderTableView(schedules) {
 
 // --- Calendar View Rendering ---
 function renderCalendarView() {
-    calendarLoadingMessage.style.display = 'none'; // Hide loading message
     calendarDaysContainer.innerHTML = ''; // Clear previous days
 
     const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -271,10 +261,10 @@ function renderCalendarView() {
                 let text = participant;
                 if (index === 0) {
                     type = 'first';
-                    text = `>> ${participant} INTAKE <<`;
+                    text = `>> ${participant} <<`;
                 } else if (index === arr.length - 1) {
                     type = 'last';
-                    text = `< ${participant} >`;
+                    text = `<< ${participant} >>`;
                 }
                 checkAndAddEvent(dateStr, type, text);
             });
@@ -285,7 +275,7 @@ function renderCalendarView() {
                 let text = `[[ ${participant} ]]`;
                  if (index === arr.length - 1) {
                     type = 'last-backup';
-                    text = `[[ < ${participant} > ]]`;
+                    text = `[[ << ${participant} >> ]]`;
                 }
                 checkAndAddEvent(dateStr, type, text);
             });

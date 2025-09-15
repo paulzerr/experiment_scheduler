@@ -195,7 +195,6 @@ function renderTableView(schedules) {
 
 // --- Calendar View Rendering ---
 function renderCalendarView() {
-    calendarLoadingMessage.style.display = 'none'; // Hide loading message
     calendarDaysContainer.innerHTML = ''; // Clear previous days
 
     const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -271,10 +270,10 @@ function renderCalendarView() {
                 let text = participant;
                 if (index === 0) {
                     type = 'first';
-                    text = `>> ${participant} INTAKE <<`;
+                    text = `>> ${participant} <<`;
                 } else if (index === arr.length - 1) {
                     type = 'last';
-                    text = `< ${participant} >`;
+                    text = `<< ${participant} >>`;
                 }
                 checkAndAddEvent(dateStr, type, text);
             });
@@ -285,7 +284,7 @@ function renderCalendarView() {
                 let text = `[[ ${participant} ]]`;
                  if (index === arr.length - 1) {
                     type = 'last-backup';
-                    text = `[[ < ${participant} > ]]`;
+                    text = `[[ << ${participant} >> ]]`;
                 }
                 checkAndAddEvent(dateStr, type, text);
             });

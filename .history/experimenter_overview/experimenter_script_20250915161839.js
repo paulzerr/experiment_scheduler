@@ -271,7 +271,7 @@ function renderCalendarView() {
                 let text = participant;
                 if (index === 0) {
                     type = 'first';
-                    text = `>> ${participant} INTAKE <<`;
+                    text = `>> ${participant} INTAKE/1st session <<`;
                 } else if (index === arr.length - 1) {
                     type = 'last';
                     text = `< ${participant} >`;
@@ -285,7 +285,7 @@ function renderCalendarView() {
                 let text = `[[ ${participant} ]]`;
                  if (index === arr.length - 1) {
                     type = 'last-backup';
-                    text = `[[ < ${participant} > ]]`;
+                    text = `[[ < ${participant} last backup > ]]`;
                 }
                 checkAndAddEvent(dateStr, type, text);
             });

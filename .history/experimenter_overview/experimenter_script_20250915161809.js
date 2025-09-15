@@ -271,7 +271,7 @@ function renderCalendarView() {
                 let text = participant;
                 if (index === 0) {
                     type = 'first';
-                    text = `>> ${participant} INTAKE <<`;
+                    text = `>>> ${participant} <<<`;
                 } else if (index === arr.length - 1) {
                     type = 'last';
                     text = `< ${participant} >`;

@@ -282,10 +282,10 @@ function renderCalendarView() {
             // Backup sessions
             (schedule.backup_dates || []).forEach((dateStr, index, arr) => {
                 let type = 'backup';
-                let text = `[[ ${participant} ]]`;
+                let text = `[[ ${participant} bckp ]]`;
                  if (index === arr.length - 1) {
                     type = 'last-backup';
-                    text = `[[ < ${participant} > ]]`;
+                    text = `[[ < ${participant} last bckp > ]]`;
                 }
                 checkAndAddEvent(dateStr, type, text);
             });

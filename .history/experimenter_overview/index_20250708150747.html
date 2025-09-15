@@ -68,11 +68,6 @@
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;}
         .calendar-nav button { padding: 5px 10px; }
         .calendar-title { font-size: 1.3em; font-weight: bold; }
-        .calendar-legend { margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 5px; }
-        .calendar-legend h4 { margin-top: 0; }
-        .calendar-legend ul { list-style: none; padding: 0; margin: 0; }
-        .calendar-legend li { margin-bottom: 5px; }
-        .legend-marker { display: inline-block; margin-right: 10px; font-family: monospace; }
     </style>
 </head>
 <body>
@@ -103,15 +98,6 @@
         </div>
         <p class="loading-message" id="calendarLoading">Loading calendar view...</p>
 
-        <div class="calendar-legend">
-            <h4>Legend:</h4>
-            <ul>
-                <li><span class="legend-marker event-first-session">>> Participant INTAKE <<</span> First Session / Intake</li>
-                <li><span class="legend-marker event-last-session">< Participant ></span> Last Session</li>
-                <li><span class="legend-marker event-backup">[[ Participant ]]</span> Backup Session</li>
-                <li><span class="legend-marker event-last-backup">[[ < Participant > ]]</span> Last Backup Session</li>
-            </ul>
-        </div>
 
         <hr style="margin-top: 30px;">
         <h2>Table View</h2>
@@ -126,8 +112,6 @@
     
     <!-- Configuration -->
     <script src="../config.js"></script>
-    <script src="dateManager.js"></script>
-    <script src="config.js"></script>
 
     <!-- experimenter view -->
     <script src="experimenter_script.js"></script>
