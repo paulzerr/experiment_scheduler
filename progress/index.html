@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Overview</title>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        body.progress-page {
+            display: block; /* Override flex layout from style.css */
+            padding: 10px;
+        }
+        .overview-container {
+            width: 65%;
+            max-width: none; /* Override any max-width from other stylesheets */
+            margin: 20px auto;
+        }
+        .chart-container {
+            width: 100%;
+            margin: 50px auto;
+        }
+    </style>
+</head>
+<body class="progress-page">
+    <div class="overview-container">
+        <h1>Experiment Progress Overview</h1>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button id="togglePreviewBtn">Toggle Future Preview</button>
+        </div>
+        <div class="chart-container">
+            <canvas id="completedSessionsChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="sessionsPerDayChart"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../config.js"></script>
+    <script src="../experimenter_overview/config.js"></script>
+    <script src="../dateManager.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
