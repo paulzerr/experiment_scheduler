@@ -79,7 +79,7 @@ async function getParticipantInfo() {
 async function fetchAndUpdateAvailability() {
     const { data, error } = await supabaseClient
         .from('schedules')
-        .select('session_dates, backup_dates, instruction_timeslot');
+        .select('session_dates, backup_dates, instruction_timeslot, has_equipment_days');
 
     if (error) throw new Error('Could not fetch schedule data.');
 
@@ -87,7 +87,7 @@ async function fetchAndUpdateAvailability() {
     const takenDateTimeSlots = new Set();
 
     data?.forEach(schedule => {
-        const allDates = (schedule.session_dates || []).concat(schedule.backup_dates || []);
+        const allDates = schedule.has_equipment_days || (schedule.session_dates || []).concat(schedule.backup_dates || []);
         
         allDates.forEach(dateStr => {
             if (!dateStr) return;

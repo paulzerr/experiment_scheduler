@@ -192,6 +192,32 @@ class SessionManager {
      * Converts Date objects to YYYY-MM-DD strings for the database.
      * @returns {Object} Sorted session data for submission.
      */
+    getEquipmentDays() {
+        if (this.selectedSessions.length === 0) {
+            return [];
+        }
+
+        const allDates = [...this.selectedSessions, ...this.selectedBackups].sort((a, b) => a.getTime() - b.getTime());
+        const firstDay = allDates[0];
+        const lastDay = allDates[allDates.length - 1];
+
+        // Calculate the cleaning day
+        const cleaningDay = new Date(lastDay);
+        cleaningDay.setDate(cleaningDay.getDate() + 1);
+        const finalCleaningDay = DateManager.getNextWorkDay(cleaningDay);
+
+        // Generate all days from the first session to the final cleaning day
+        const equipmentDays = [];
+        let currentDay = new Date(firstDay);
+
+        while (currentDay <= finalCleaningDay) {
+            equipmentDays.push(DateManager.toYYYYMMDD(currentDay));
+            currentDay.setDate(currentDay.getDate() + 1);
+        }
+
+        return equipmentDays;
+    }
+
     getSubmissionData() {
         const sortedSessions = [...this.selectedSessions].sort((a, b) => a.getTime() - b.getTime());
         const sortedBackups = [...this.selectedBackups].sort((a, b) => a.getTime() - b.getTime());
@@ -199,7 +225,8 @@ class SessionManager {
         return {
             session_dates: sortedSessions.map(d => DateManager.toYYYYMMDD(d)),
             backup_dates: sortedBackups.map(d => DateManager.toYYYYMMDD(d)),
-            instruction_timeslot: this.selectedTimeslot
+            instruction_timeslot: this.selectedTimeslot,
+            has_equipment_days: this.getEquipmentDays()
         };
     }
 

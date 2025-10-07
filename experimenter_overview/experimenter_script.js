@@ -303,7 +303,7 @@ function renderCalendarView() {
                         cssClass = 'event-last-backup';
                         title = `Participant ${participant} - Last Backup`;
                     }
-                    addEventToList(eventsList, text, cssClass, title, participantColor);
+                    addEventToList(eventsList, text, cssClass, title, participantColor, null);
                 }
             };
             
@@ -331,6 +331,27 @@ function renderCalendarView() {
                 }
                 checkAndAddEvent(dateStr, type, text);
             });
+
+            // Has Equipment Days
+            (schedule.has_equipment_days || []).forEach((dateStr, index, arr) => {
+                const eventDate = DateManager.toUTCDate(dateStr);
+                if (eventDate && eventDate.getTime() === currentDate.getTime()) {
+                    const isSessionOnThisDay = (schedule.session_dates || []).some(d => DateManager.toUTCDate(d).getTime() === eventDate.getTime());
+                    const isBackupOnThisDay = (schedule.backup_dates || []).some(d => DateManager.toUTCDate(d).getTime() === eventDate.getTime());
+
+                    if (!isSessionOnThisDay && !isBackupOnThisDay) {
+                        let text = participant;
+                        let title = `Participant ${participant} - Has Equipment`;
+                        // Check if it's the last day in the array
+                        if (index === arr.length - 1) {
+                            text += ' (cleaning)';
+                            title += ' (Cleaning)';
+                        }
+                        // Use a specific CSS class and color for these days
+                        addEventToList(eventsList, text, 'event-equipment-day', title, '#e0e0e0', '#666666');
+                    }
+                }
+            });
         });
 
         if (eventsList.hasChildNodes()) {
@@ -349,7 +370,7 @@ function renderCalendarView() {
     }
 }
 
-function addEventToList(ulElement, text, cssClass, title, backgroundColor) {
+function addEventToList(ulElement, text, cssClass, title, backgroundColor, textColor) {
     const li = document.createElement('li');
     li.classList.add(cssClass);
     li.textContent = text;
@@ -358,6 +379,9 @@ function addEventToList(ulElement, text, cssClass, title, backgroundColor) {
     // Apply participant-specific color
     if (backgroundColor) {
         li.style.backgroundColor = backgroundColor;
+    }
+    if (textColor) {
+        li.style.color = textColor;
     }
     
     ulElement.appendChild(li);
