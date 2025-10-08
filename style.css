@@ -262,3 +262,35 @@ button#reviewButton:disabled, button#submitButton:disabled {
         font-size: 1.3em;
     }
 }
+
+/* Dropout Page Specific Styles */
+.dropout-details {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 15px;
+    text-align: left;
+}
+
+.dropout-details .column {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.dropout-details h4 {
+    margin-top: 0;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 5px;
+}
+
+.dropout-details ul {
+    padding-left: 20px;
+    margin-top: 5px;
+}
+
+.dropout-details li {
+    margin-bottom: 5px;
+}

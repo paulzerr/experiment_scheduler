@@ -15,7 +15,7 @@ const SCHEDULER_CONFIG = {
     NUM_BACKUP_SESSIONS: 3,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 15,
+    MAX_CONCURRENT_SESSIONS: 14,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 14, // Next 2 weeks for first available session
@@ -28,8 +28,17 @@ const SCHEDULER_CONFIG = {
     // Time slot options for instruction sessions
     TIME_SLOTS: [
         '11:00',
+        '11:30',
+        '12:00',
+        '12:30',
         '13:00',
+        '13:30',
+        '14:00',
+        '14:30',
         '15:00',
+        '15:30',
+        '16:00',
+        '16:30',
         '17:00',
     ],
     

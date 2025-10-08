@@ -38,7 +38,72 @@ class SessionManager {
      * @returns {boolean} True if available for an instruction session.
      */
     isDateAvailableForInstruction(date) {
-        return this.isDateAvailable(date) && !DateManager.isDateBlocked(date) && !DateManager.isWeekend(date);
+        const instructionSessionsCount = this.countInstructionSessionsOnDate(date);
+        return this.isDateAvailable(date) &&
+               !DateManager.isDateBlocked(date) &&
+               !DateManager.isWeekend(date) &&
+               instructionSessionsCount < 3;
+    }
+
+    /**
+     * Counts the number of instruction sessions already scheduled on a given date.
+     * @param {Date} date - The date to check.
+     * @returns {number} The number of instruction sessions on that date.
+     */
+    countInstructionSessionsOnDate(date) {
+        const dateString = DateManager.toYYYYMMDD(date);
+        let count = 0;
+        for (const dateTimeSlot of this.takenDateTimeSlots) {
+            if (dateTimeSlot.startsWith(dateString)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Gets available time slots for a given date, enforcing a 2.5-hour gap.
+     * @param {Date} date - The date for which to get available time slots.
+     * @returns {string[]} An array of available time slot strings.
+     */
+    getAvailableTimeSlots(date) {
+        const dateString = DateManager.toYYYYMMDD(date);
+        const takenSlotsOnDate = [];
+        this.takenDateTimeSlots.forEach(slot => {
+            if (slot.startsWith(dateString)) {
+                takenSlotsOnDate.push(slot.split('_')[1]);
+            }
+        });
+
+        if (takenSlotsOnDate.length === 0) {
+            return this.config.TIME_SLOTS;
+        }
+
+        const timeToMinutes = (time) => {
+            const [hours, minutes] = time.split(':').map(Number);
+            return hours * 60 + minutes;
+        };
+
+        const takenMinutes = takenSlotsOnDate.map(timeToMinutes);
+        const gap = 150; // 2.5 hours in minutes
+
+        return this.config.TIME_SLOTS.filter(slot => {
+            const slotMinutes = timeToMinutes(slot);
+            
+            // Check if the slot itself is taken
+            if (takenMinutes.includes(slotMinutes)) {
+                return false;
+            }
+
+            // Check for the 2.5-hour gap
+            for (const taken of takenMinutes) {
+                if (Math.abs(slotMinutes - taken) < gap) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
     }
 
     /**
@@ -227,6 +292,35 @@ class SessionManager {
             backup_dates: sortedBackups.map(d => DateManager.toYYYYMMDD(d)),
             instruction_timeslot: this.selectedTimeslot,
             has_equipment_days: this.getEquipmentDays()
+        };
+    }
+
+    /**
+     * Validates the selected sessions and timeslot against the latest availability data.
+     * @returns {{isValid: boolean, conflicts: Array<string>}} An object indicating if the selection is valid and a list of conflicts.
+     */
+    validateSelection() {
+        const conflicts = [];
+        const allSelectedDates = [...this.selectedSessions, ...this.selectedBackups];
+
+        // Check if all selected dates are still available
+        for (const date of allSelectedDates) {
+            if (!this.isDateAvailable(date)) {
+                conflicts.push(`Date ${DateManager.toYYYYMMDD(date)} is no longer available.`);
+            }
+        }
+
+        // Check if the selected timeslot for the first session is still available
+        if (this.selectedTimeslot && this.selectedSessions.length > 0) {
+            const firstSessionDate = this.selectedSessions[0];
+            if (!this.isTimeslotAvailable(this.selectedTimeslot, firstSessionDate)) {
+                conflicts.push(`Timeslot ${this.selectedTimeslot} on ${DateManager.toYYYYMMDD(firstSessionDate)} is no longer available.`);
+            }
+        }
+
+        return {
+            isValid: conflicts.length === 0,
+            conflicts: conflicts
         };
     }
 

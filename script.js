@@ -29,12 +29,14 @@ const elements = {
     logOutput: document.getElementById('logOutput'),
     submitButton: document.getElementById('submitButton'),
     submissionStatus: document.getElementById('submissionStatus'),
-    pdfStatus: document.getElementById('pdfStatus')
+    pdfStatus: document.getElementById('pdfStatus'),
+    downloadPdfButton: document.getElementById('downloadPdfButton')
 };
 
 // --- State Variables ---
 let participantInfo = null;
 let sessionManager = new SessionManager(SCHEDULER_CONFIG);
+let availabilityInterval = null; // To hold the interval ID
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', initializeScheduler);
@@ -50,6 +52,7 @@ async function initializeScheduler() {
         
         hideLoading();
         elements.schedulerContent.classList.remove('hidden');
+        startAvailabilityPolling();
     } catch (error) {
         console.error("Error initializing scheduler:", error);
         showError(error.message || "Failed to load availability. Please try refreshing the page.");
@@ -158,14 +161,14 @@ function populateTimeslotButtons() {
     
     const selectedDate = sessionManager.selectedSessions[0] || null;
 
-    SCHEDULER_CONFIG.TIME_SLOTS.forEach(timeSlot => {
-        if (sessionManager.isTimeslotAvailable(timeSlot, selectedDate)) {
-            const button = document.createElement('button');
-            button.classList.add('timeslot-button');
-            button.textContent = timeSlot;
-            button.onclick = () => handleTimeslotSelection(timeSlot, button);
-            elements.timeslotButtons.appendChild(button);
-        }
+    const availableTimeSlots = sessionManager.getAvailableTimeSlots(selectedDate);
+
+    availableTimeSlots.forEach(timeSlot => {
+        const button = document.createElement('button');
+        button.classList.add('timeslot-button');
+        button.textContent = timeSlot;
+        button.onclick = () => handleTimeslotSelection(timeSlot, button);
+        elements.timeslotButtons.appendChild(button);
     });
 
     if (selectedDate) {
@@ -361,12 +364,24 @@ elements.submitButton.addEventListener('click', async () => {
     elements.submitButton.disabled = true;
     elements.reviewButton.disabled = true;
 
-    const submissionData = {
-        ...sessionManager.getSubmissionData(),
-        submission_timestamp: new Date().toISOString()
-    };
-
     try {
+        // Re-fetch availability right before submission
+        await fetchAndUpdateAvailability();
+
+        // Validate the current selection
+        const validation = sessionManager.validateSelection();
+        if (!validation.isValid) {
+            const errorMessage = "Our apologies, it appears that while you were filling in the dates, someone else already submitted their answers, and some of these dates are now no longer available. The page will now refresh and you will see the currently available dates.";
+            showError(errorMessage);
+            setTimeout(() => window.location.reload(), 5000); // Refresh after 5 seconds
+            return;
+        }
+
+        const submissionData = {
+            ...sessionManager.getSubmissionData(),
+            submission_timestamp: new Date().toISOString()
+        };
+
         const { error } = await supabaseClient
             .from('schedules')
             .update(submissionData)
@@ -374,6 +389,7 @@ elements.submitButton.addEventListener('click', async () => {
 
         if (error) throw error;
 
+        clearInterval(availabilityInterval); // Stop polling
         setSubmissionStatus('Schedule submitted successfully!', 'success');
         disableAllDateButtons();
         disableAllTimeslotButtons();
@@ -381,6 +397,14 @@ elements.submitButton.addEventListener('click', async () => {
             ...submissionData,
             participant_id: participantInfo.link_id
         }, participantInfo.participant_id);
+
+        elements.downloadPdfButton.classList.remove('hidden');
+        elements.downloadPdfButton.addEventListener('click', () => {
+            generateAndDownloadPDF({
+                ...submissionData,
+                participant_id: participantInfo.link_id
+            }, participantInfo.participant_id);
+        });
     } catch (err) {
         console.error('Submission error:', err);
         setSubmissionStatus('Submission failed. Please try again.', 'error');
@@ -388,6 +412,60 @@ elements.submitButton.addEventListener('click', async () => {
         elements.reviewButton.disabled = false;
     }
 });
+
+// --- Real-time Availability ---
+function startAvailabilityPolling() {
+    // Poll every 10 seconds
+    availabilityInterval = setInterval(async () => {
+        try {
+            await fetchAndUpdateAvailability();
+            updateCalendars();
+        } catch (error) {
+            console.warn("Could not poll for availability:", error.message);
+        }
+    }, 10000);
+}
+
+function updateCalendars() {
+    document.querySelectorAll('.date-button').forEach(button => {
+        const date = DateManager.toUTCDate(button.dataset.date);
+        if (!date) return;
+
+        const isAvailable = sessionManager.isDateAvailable(date);
+        const isSelected = button.classList.contains('selected');
+
+        // Only update if it's not selected by the user
+        if (!isSelected) {
+            button.disabled = !isAvailable;
+            if (!isAvailable) {
+                button.title = "Date unavailable (maximum concurrent sessions reached)";
+            } else {
+                button.title = "";
+            }
+        }
+    });
+
+    // Also update timeslot buttons if they are visible
+    if (!elements.timeslotSection.classList.contains('hidden')) {
+        const selectedDate = sessionManager.selectedSessions[0] || null;
+        const availableTimeSlots = sessionManager.getAvailableTimeSlots(selectedDate);
+        
+        elements.timeslotButtons.querySelectorAll('.timeslot-button').forEach(button => {
+            const timeSlot = button.textContent;
+            const isAvailable = availableTimeSlots.includes(timeSlot);
+            const isSelected = button.classList.contains('selected');
+
+            if (!isSelected) {
+                button.disabled = !isAvailable;
+                 if (!isAvailable) {
+                    button.title = "Timeslot is no longer available";
+                } else {
+                    button.title = "";
+                }
+            }
+        });
+    }
+}
 
 // --- Utility Functions ---
 function showLoading(message) {

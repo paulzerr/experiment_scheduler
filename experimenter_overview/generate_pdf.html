@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Participant PDF</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Generate Participant Schedule PDF</h1>
+        <p>Enter a participant ID to generate and download their schedule.</p>
+
+        <div class="form-container">
+            <input type="text" id="participantIdInput" placeholder="Enter Participant ID">
+            <button id="generatePdfButton">Generate PDF</button>
+        </div>
+
+        <div id="statusMessages" class="status-box hidden"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="../config.js"></script>
+    <script src="../dateManager.js"></script>
+    <script src="../pdfGenerator.js"></script>
+    <script src="generate_pdf.js"></script>
+</body>
+</html>

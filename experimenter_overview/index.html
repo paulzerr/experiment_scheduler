@@ -50,13 +50,21 @@
             margin-top: 20px;
             margin-bottom: 30px;
         }
-        .calendar-header, .calendar-day {
+        .calendar-day {
             background-color: white;
             padding: 8px;
             text-align: center;
             font-size: 0.9em;
+            position: relative; /* Needed for absolute positioning of child */
+            min-height: 80px; /* Ensure day cells have enough height */
         }
-        .calendar-header { background-color: #e9e9e9; font-weight: bold; }
+        .calendar-header {
+            padding: 4px;
+            text-align: center;
+            font-size: 0.8em;
+            background-color: #e9e9e9;
+            font-weight: bold;
+        }
         .calendar-day.is-today { background-color: #fff9c4; } /* Light yellow for today */
         .calendar-day.other-month { color: #aaa; background-color: #f9f9f9; }
         .calendar-day ul { list-style: none; padding: 0; margin: 3px 0 0 0; font-size: 0.75em; text-align: left; }
@@ -67,6 +75,23 @@
         .event-last-session { border-left: 3px solid #f57c00; font-weight: bold; }
         .event-backup { border-left: 3px solid #388e3c; }
         .event-last-backup { border-left: 3px solid #f57c00; font-weight: bold; }
+        .equipment-count {
+            margin-top: 5px;
+            font-size: 0.8em;
+            color: #666;
+            background-color: #f0f0f0;
+            padding: 1px 4px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .day-number {
+            font-weight: bold;
+            background-color: white;
+            border: 1px solid black;
+            padding: 2px;
+            border-radius: 3px;
+            display: block;
+        }
 
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;}
         .calendar-nav button { padding: 5px 10px; }
@@ -81,6 +106,9 @@
 <body>
     <div class="overview-container" id="overviewContent">
         <h1>Overview of Scheduled Sessions in Lucid Dreaming at Home</h1>
+        <a href="generate_pdf.html" class="timeslot-button">Generate ppt schedule PDF</a>
+        <a href="dropout_ppt.html" class="timeslot-button">Dropout ppt</a>
+        <a href="../progress/index.html" class="timeslot-button">Progress summary</a>
 
         <hr>
         <h2>Calendar View</h2>
@@ -92,13 +120,13 @@
         <div id="calendarViewContainer" class="calendar-grid-container">
             <div class="calendar-grid">
                 <!-- Calendar headers (Sun-Sat) -->
-                <div class="calendar-header">Sun</div>
                 <div class="calendar-header">Mon</div>
                 <div class="calendar-header">Tue</div>
                 <div class="calendar-header">Wed</div>
                 <div class="calendar-header">Thu</div>
                 <div class="calendar-header">Fri</div>
                 <div class="calendar-header">Sat</div>
+                <div class="calendar-header">Sun</div>
             </div>
             <div id="calendarDays" class="calendar-grid">
                 <!-- Calendar days will be populated by JS -->
@@ -109,10 +137,10 @@
         <div class="calendar-legend">
             <h4>Legend:</h4>
             <ul>
-                <li><span class="legend-marker event-first-session">>> Participant INTAKE <<</span> First Session / Intake</li>
-                <li><span class="legend-marker event-last-session">< Participant ></span> Last Session</li>
-                <li><span class="legend-marker event-backup">[[ Participant ]]</span> Backup Session</li>
-                <li><span class="legend-marker event-last-backup">[[ < Participant > ]]</span> Last Backup Session</li>
+                <li><span class="legend-marker event-first-session">>> 000 11:00 <<</span> First Session / Intake</li>
+                <li><span class="legend-marker event-last-session">< 000 ></span> Last Session</li>
+                <li><span class="legend-marker event-backup">000 (bkp)</span> Backup Session</li>
+                <li><span class="legend-marker event-last-backup">000 (LAST bkp)</span> Last Backup Session</li>
             </ul>
         </div>
 

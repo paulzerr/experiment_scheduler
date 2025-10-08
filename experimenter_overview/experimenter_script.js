@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', initializeSupabase);
 
 let supabaseClient;
 
+function formatParticipantId(id) {
+    if (id && typeof id === 'string' && id.startsWith('120') && id.length > 3) {
+        return id.slice(-3);
+    }
+    return id || '';
+}
+
 function initializeSupabase() {
     if (window.supabase) {
         supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY);
@@ -156,7 +163,7 @@ function renderTableSection(container, schedules, today, noSchedulesMessage) {
 
     schedules.forEach(schedule => {
         const isDroppedOut = OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id);
-        const participantId = `${schedule.participant_id || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
+        const participantId = `${formatParticipantId(schedule.participant_id) || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
         
         const firstSessionDateStr = schedule.session_dates?.[0];
         const firstSessionDate = firstSessionDateStr ? new Date(firstSessionDateStr) : null;
@@ -200,7 +207,7 @@ function renderTableSection(container, schedules, today, noSchedulesMessage) {
     `;
     schedules.forEach(schedule => {
         const isDroppedOut = OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id);
-        const participantId = `${schedule.participant_id || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
+        const participantId = `${formatParticipantId(schedule.participant_id) || 'N/A'}${isDroppedOut ? ' (dropped out)' : ''}`;
         
         const lastBackupDateStr = schedule.backup_dates?.[schedule.backup_dates.length - 1];
         const lastBackupDate = lastBackupDateStr ? new Date(lastBackupDateStr) : null;
@@ -246,7 +253,7 @@ function renderCalendarView() {
 
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const startingDayOfWeek = firstDayOfMonth.getDay(); // 0 (Sun) to 6 (Sat)
+    const startingDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7; // 0 (Mon) to 6 (Sun)
 
     // Add empty cells for days before the first of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -271,7 +278,10 @@ function renderCalendarView() {
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
         dayCell.classList.add('calendar-day');
-        dayCell.textContent = day;
+        const dayNumber = document.createElement('div');
+        dayNumber.classList.add('day-number');
+        dayNumber.textContent = day;
+        dayCell.appendChild(dayNumber);
 
         const currentDate = DateManager.toUTCDate(new Date(currentYear, currentMonth, day));
         if (currentDate.getTime() === today.getTime()) {
@@ -279,10 +289,12 @@ function renderCalendarView() {
         }
 
         const eventsList = document.createElement('ul');
+        let equipmentPptCount = 0;
 
         allSchedulesData.forEach(schedule => {
-            const participant = schedule.participant_id || 'Unknown';
-            const participantColor = participantColors[participant];
+            const originalParticipantId = schedule.participant_id || 'Unknown';
+            const participant = formatParticipantId(originalParticipantId);
+            const participantColor = participantColors[originalParticipantId];
 
             const checkAndAddEvent = (dateStr, type, text) => {
                 if (!dateStr) return;
@@ -313,7 +325,8 @@ function renderCalendarView() {
                 let text = participant;
                 if (index === 0) {
                     type = 'first';
-                    text = `>> ${participant} INTAKE <<`;
+                    const timeSlot = schedule.instruction_timeslot ? schedule.instruction_timeslot.slice(0, 5) : '';
+                    text = `>> ${participant} ${timeSlot} <<`;
                 } else if (index === arr.length - 1) {
                     type = 'last';
                     text = `< ${participant} >`;
@@ -324,15 +337,23 @@ function renderCalendarView() {
             // Backup sessions
             (schedule.backup_dates || []).forEach((dateStr, index, arr) => {
                 let type = 'backup';
-                let text = `[[ ${participant} ]]`;
+                let text = `${participant} (bkp)`;
                  if (index === arr.length - 1) {
                     type = 'last-backup';
-                    text = `[[ < ${participant} > ]]`;
+                    text = `${participant} (LAST bkp)`;
                 }
                 checkAndAddEvent(dateStr, type, text);
             });
 
-            // Has Equipment Days
+            // Has Equipment Days - count how many ppts have equipment
+            const hasEquipmentOnDay = (schedule.has_equipment_days || []).some(
+                dateStr => DateManager.toUTCDate(dateStr).getTime() === currentDate.getTime()
+            );
+            if (hasEquipmentOnDay) {
+                equipmentPptCount++;
+            }
+
+            // Has Equipment Days - display event if not a session day
             (schedule.has_equipment_days || []).forEach((dateStr, index, arr) => {
                 const eventDate = DateManager.toUTCDate(dateStr);
                 if (eventDate && eventDate.getTime() === currentDate.getTime()) {
@@ -356,6 +377,18 @@ function renderCalendarView() {
 
         if (eventsList.hasChildNodes()) {
             dayCell.appendChild(eventsList);
+        }
+
+        // Add the equipment count to the bottom of the day cell
+        if (equipmentPptCount > 0) {
+            const wrapper = document.createElement('div');
+            wrapper.style.textAlign = 'center';
+            const countElement = document.createElement('div');
+            countElement.classList.add('equipment-count');
+            countElement.textContent = `🔧 ${equipmentPptCount}`; // Icon for clarity
+            countElement.title = `${equipmentPptCount} participant(s) have equipment`;
+            wrapper.appendChild(countElement);
+            dayCell.appendChild(wrapper);
         }
         calendarDaysContainer.appendChild(dayCell);
     }

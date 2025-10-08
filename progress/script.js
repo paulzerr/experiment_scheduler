@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadAndProcessData() {
         const { data, error } = await supabaseClient
             .from('schedules')
-            .select('session_dates, participant_id')
+            .select('participant_id, session_dates, backup_dates')
             .order('submission_timestamp', { ascending: false });
 
         if (error) {
@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // Calculate and render the summary table with the full dataset
+        calculateAndRenderSummary(data);
+
+        // Now, filter for the charts
         allData = data
             .filter(schedule => !OVERVIEW_CONFIG.EXCLUDED_PPTS.has(schedule.participant_id))
             .flatMap(schedule => schedule.session_dates || [])
@@ -31,8 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .sort((a, b) => a - b);
 
         if (allData.length === 0) {
-            console.log("No sessions found.");
-            return;
+            console.log("No sessions found for charts.");
         }
 
         document.getElementById('togglePreviewBtn').addEventListener('click', () => {
@@ -41,6 +44,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         createCharts();
+    }
+
+    function calculateAndRenderSummary(schedules) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let completed = 0;
+        let running = 0;
+        let scheduled = 0;
+        const dropouts = OVERVIEW_CONFIG.EXCLUDED_PPTS.size;
+
+        const nonDropouts = schedules.filter(s => !OVERVIEW_CONFIG.EXCLUDED_PPTS.has(s.participant_id));
+
+        nonDropouts.forEach(schedule => {
+            const sessionDates = (schedule.session_dates || []).map(d => new Date(d));
+            const backupDates = (schedule.backup_dates || []).map(d => new Date(d));
+            
+            if (sessionDates.length === 0) {
+                return;
+            }
+
+            const firstSession = sessionDates[0];
+            const allDates = sessionDates.concat(backupDates);
+            const lastDate = new Date(Math.max.apply(null, allDates));
+
+            if (lastDate < today) {
+                completed++;
+            } else if (firstSession <= today) {
+                running++;
+            } else { // firstSession is in the future
+                scheduled++;
+            }
+        });
+
+        const summaryContainer = document.getElementById('summary-container');
+        if (summaryContainer) {
+            summaryContainer.innerHTML = `
+                <h3>Experiment Summary</h3>
+                <table style="margin: 0 auto; border-collapse: collapse; width: 300px;">
+                    <tbody>
+                        <tr><td style="text-align: left; padding: 5px;">Currently running:</td><td style="text-align: right; padding: 5px;">${running}</td></tr>
+                        <tr><td style="text-align: left; padding: 5px;">Completed ppts:</td><td style="text-align: right; padding: 5px;">${completed}</td></tr>
+                        <tr><td style="text-align: left; padding: 5px;">Dropouts:</td><td style="text-align: right; padding: 5px;">${dropouts}</td></tr>
+                        <tr><td style="text-align: left; padding: 5px;">Scheduled:</td><td style="text-align: right; padding: 5px;">${scheduled}</td></tr>
+                    </tbody>
+                </table>
+            `;
+        }
     }
 
     function getChartData() {
