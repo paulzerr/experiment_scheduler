@@ -15,7 +15,7 @@ const SCHEDULER_CONFIG = {
     NUM_BACKUP_SESSIONS: 3,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 14,
+    MAX_CONCURRENT_SESSIONS: 15,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 14, // Next 2 weeks for first available session
