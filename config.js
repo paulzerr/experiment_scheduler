@@ -15,7 +15,7 @@ const SCHEDULER_CONFIG = {
     NUM_BACKUP_SESSIONS: 3,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 15,
+    MAX_CONCURRENT_SESSIONS: 14,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 14, // Next 2 weeks for first available session
@@ -45,19 +45,19 @@ const SCHEDULER_CONFIG = {
     // Blocked dates - no instruction sessions may be scheduled on these dates
     // Blocked dates are converted to a Set for efficient O(1) lookups.
     BLOCKED_DATES: new Set([
-        // '2025-07-11',
-        // '2025-08-13',
-        // '2025-08-12',
-        // '2025-08-30',
-        '2025-07-24',
-        '2025-07-25',
-        '2025-07-26',
-        '2025-07-27',
-        '2025-07-28',
-        '2025-07-29',
-        '2025-07-30',
-        '2025-07-31',
-        '2025-08-01',
+        '2025-12-23',
+        '2025-12-24',
+        '2025-12-25',
+        '2025-12-26',
+        '2025-12-27',
+        '2025-12-28',
+        '2025-12-29',
+        '2025-12-30',
+        '2025-12-31',
+        '2026-01-01',
+        '2026-01-02',
+        '2026-01-03',
+        '2026-01-04',
         
     ])
 };
