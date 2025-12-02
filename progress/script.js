@@ -120,7 +120,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const uniqueDays = [...new Set(allDates)].sort();
         
         const firstDay = new Date(uniqueDays[0]);
-        const lastDay = showPreview ? new Date('2025-11-30') : new Date(uniqueDays[uniqueDays.length - 1]);
+        // Use the last data point or a fixed future date (3 months from now), whichever is later
+        const fixedFutureDate = new Date();
+        fixedFutureDate.setMonth(fixedFutureDate.getMonth() + 2);
+        
+        const lastDataDate = new Date(uniqueDays[uniqueDays.length - 1]);
+        const lastDay = showPreview ? (lastDataDate > fixedFutureDate ? lastDataDate : fixedFutureDate) : lastDataDate;
 
         const labels = [];
         const cumulativeData = [];

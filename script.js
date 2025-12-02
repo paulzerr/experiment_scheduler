@@ -87,7 +87,7 @@ async function fetchAndUpdateAvailability() {
     if (error) throw new Error('Could not fetch schedule data.');
 
     const dateCountMap = new Map();
-    const takenDateTimeSlots = new Set();
+    const takenDateTimeSlots = new Map();
 
     data?.forEach(schedule => {
         const allDates = schedule.has_equipment_days || (schedule.session_dates || []).concat(schedule.backup_dates || []);
@@ -105,7 +105,8 @@ async function fetchAndUpdateAvailability() {
             const firstSessionDateKey = DateManager.toYYYYMMDD(DateManager.toUTCDate(schedule.session_dates[0]));
             if (firstSessionDateKey) {
                 const normalizedTime = schedule.instruction_timeslot.substring(0, 5);
-                takenDateTimeSlots.add(`${firstSessionDateKey}_${normalizedTime}`);
+                const key = `${firstSessionDateKey}_${normalizedTime}`;
+                takenDateTimeSlots.set(key, (takenDateTimeSlots.get(key) || 0) + 1);
             }
         }
     });

@@ -7,14 +7,14 @@ class SessionManager {
         this.selectedBackups = [];
         this.selectedTimeslot = null;
         this.dateCountMap = new Map();
-        this.takenDateTimeSlots = new Set();
+        this.takenDateTimeSlots = new Map();
     }
 
     /**
      * Updates the maps of booked/taken dates and timeslots.
      * The keys for the maps are YYYY-MM-DD strings.
      * @param {Map<string, number>} dateCountMap - Map of dates to their booking counts.
-     * @param {Set<string>} takenDateTimeSlots - Set of 'YYYY-MM-DD_HH:mm' strings for taken slots.
+     * @param {Map<string, number>} takenDateTimeSlots - Map of 'YYYY-MM-DD_HH:mm' strings to count of bookings.
      */
     updateAvailability(dateCountMap, takenDateTimeSlots) {
         this.dateCountMap = dateCountMap;
@@ -39,10 +39,17 @@ class SessionManager {
      */
     isDateAvailableForInstruction(date) {
         const instructionSessionsCount = this.countInstructionSessionsOnDate(date);
+        
+        // Check if there are any valid timeslots remaining for this date
+        // considering the 48-hour rule
+        const availableSlots = this.getAvailableTimeSlots(date);
+        const hasValidSlots = availableSlots.length > 0;
+
         return this.isDateAvailable(date) &&
                !DateManager.isDateBlocked(date) &&
                !DateManager.isWeekend(date) &&
-               instructionSessionsCount < 3;
+               instructionSessionsCount < 3 &&
+               hasValidSlots;
     }
 
     /**
@@ -53,7 +60,7 @@ class SessionManager {
     countInstructionSessionsOnDate(date) {
         const dateString = DateManager.toYYYYMMDD(date);
         let count = 0;
-        for (const dateTimeSlot of this.takenDateTimeSlots) {
+        for (const dateTimeSlot of this.takenDateTimeSlots.keys()) {
             if (dateTimeSlot.startsWith(dateString)) {
                 count++;
             }
@@ -63,20 +70,20 @@ class SessionManager {
 
     /**
      * Gets available time slots for a given date, enforcing a 2.5-hour gap.
+     * Allows up to 2 concurrent intakes on the SAME timeslot.
+     * Filters out slots less than 48 hours from now.
      * @param {Date} date - The date for which to get available time slots.
      * @returns {string[]} An array of available time slot strings.
      */
     getAvailableTimeSlots(date) {
         const dateString = DateManager.toYYYYMMDD(date);
-        const takenSlotsOnDate = [];
-        this.takenDateTimeSlots.forEach(slot => {
-            if (slot.startsWith(dateString)) {
-                takenSlotsOnDate.push(slot.split('_')[1]);
-            }
-        });
+        const takenSlotsMap = new Map(); // time -> count
 
-        if (takenSlotsOnDate.length === 0) {
-            return this.config.TIME_SLOTS;
+        for (const [key, count] of this.takenDateTimeSlots) {
+            if (key.startsWith(dateString)) {
+                const time = key.split('_')[1];
+                takenSlotsMap.set(time, count);
+            }
         }
 
         const timeToMinutes = (time) => {
@@ -84,21 +91,59 @@ class SessionManager {
             return hours * 60 + minutes;
         };
 
-        const takenMinutes = takenSlotsOnDate.map(timeToMinutes);
         const gap = 150; // 2.5 hours in minutes
+        const now = new Date();
+        const minTime = now.getTime() + (48 * 60 * 60 * 1000); // 48 hours from now
 
         return this.config.TIME_SLOTS.filter(slot => {
-            const slotMinutes = timeToMinutes(slot);
-            
-            // Check if the slot itself is taken
-            if (takenMinutes.includes(slotMinutes)) {
+            const [hours, minutes] = slot.split(':').map(Number);
+            const slotDate = new Date(date);
+            slotDate.setUTCHours(hours, minutes, 0, 0);
+
+            // 0. Check 48-hour rule
+            if (slotDate.getTime() < minTime) {
                 return false;
             }
 
-            // Check for the 2.5-hour gap
-            for (const taken of takenMinutes) {
-                if (Math.abs(slotMinutes - taken) < gap) {
+            // 0.5 Check Friday block (10:00 - 14:29)
+            // 5 is Friday in getUTCDay() (0=Sun, 1=Mon, ..., 5=Fri, 6=Sat)
+            if (slotDate.getUTCDay() === 5) {
+                const slotTimeInMinutes = hours * 60 + minutes;
+                const blockStart = 10 * 60;      // 10:00
+                const blockEnd = 14 * 60 + 29;   // 14:29
+                
+                if (slotTimeInMinutes >= blockStart && slotTimeInMinutes <= blockEnd) {
                     return false;
+                }
+            }
+
+            // 0.6 Check Monday block (before 13:00)
+            // 1 is Monday in getUTCDay()
+            if (slotDate.getUTCDay() === 1) {
+                const slotTimeInMinutes = hours * 60 + minutes;
+                const blockEnd = 13 * 60; // 13:00
+                
+                if (slotTimeInMinutes < blockEnd) {
+                    return false;
+                }
+            }
+
+            const slotMinutes = timeToMinutes(slot);
+            const slotCount = takenSlotsMap.get(slot) || 0;
+
+            // 1. Check capacity (max 2 concurrent intakes)
+            if (slotCount >= 2) {
+                return false;
+            }
+
+            // 2. Check conflicts with OTHER slots
+            // If we pick this slot, it must not overlap with any OTHER occupied slot.
+            for (const [takenTime, _] of takenSlotsMap) {
+                if (takenTime === slot) continue; // Ignore self (we can add to existing slot if count < 2)
+
+                const takenMinutes = timeToMinutes(takenTime);
+                if (Math.abs(slotMinutes - takenMinutes) < gap) {
+                    return false; // Overlaps with a different active slot
                 }
             }
             
@@ -114,9 +159,68 @@ class SessionManager {
      */
     isTimeslotAvailable(timeslot, date) {
         if (!date) return true; // If no date, assume available
+        
+        const [hours, minutes] = timeslot.split(':').map(Number);
+        const slotDate = new Date(date);
+        slotDate.setUTCHours(hours, minutes, 0, 0);
+        const now = new Date();
+        const minTime = now.getTime() + (48 * 60 * 60 * 1000); // 48 hours from now
+        
+        // 0. Check 48-hour rule
+        if (slotDate.getTime() < minTime) {
+            return false;
+        }
+
+        // 0.5 Check Friday block (10:00 - 14:29)
+        if (slotDate.getUTCDay() === 5) {
+            const slotTimeInMinutes = hours * 60 + minutes;
+            const blockStart = 10 * 60;      // 10:00
+            const blockEnd = 14 * 60 + 29;   // 14:29
+            
+            if (slotTimeInMinutes >= blockStart && slotTimeInMinutes <= blockEnd) {
+                return false;
+            }
+        }
+
+        // 0.6 Check Monday block (before 13:00)
+        if (slotDate.getUTCDay() === 1) {
+            const slotTimeInMinutes = hours * 60 + minutes;
+            const blockEnd = 13 * 60; // 13:00
+            
+            if (slotTimeInMinutes < blockEnd) {
+                return false;
+            }
+        }
+
         const dateString = DateManager.toYYYYMMDD(date);
         const dateTimeKey = `${dateString}_${timeslot}`;
-        return !this.takenDateTimeSlots.has(dateTimeKey);
+        const count = this.takenDateTimeSlots.get(dateTimeKey) || 0;
+
+        // 1. Check capacity
+        if (count >= 2) return false;
+
+        // 2. Check conflicts with OTHER slots
+        const timeToMinutes = (time) => {
+            const [hours, minutes] = time.split(':').map(Number);
+            return hours * 60 + minutes;
+        };
+
+        const slotMinutes = timeToMinutes(timeslot);
+        const gap = 150; // 2.5 hours in minutes
+
+        for (const [key, _] of this.takenDateTimeSlots) {
+            if (key.startsWith(dateString)) {
+                const takenTime = key.split('_')[1];
+                if (takenTime === timeslot) continue; // Ignore self
+
+                const takenMinutes = timeToMinutes(takenTime);
+                if (Math.abs(slotMinutes - takenMinutes) < gap) {
+                    return false; // Overlaps with a different active slot
+                }
+            }
+        }
+
+        return true;
     }
 
     /**

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiment Scheduling Rules</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .card h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tr:hover td {
+            background: #f8f9fa;
+        }
+        .rule-name {
+            font-weight: 600;
+            color: #667eea;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .badge-red {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .badge-green {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .badge-blue {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        code {
+            background: #f1f5f9;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            color: #e11d48;
+        }
+        .icon {
+            font-size: 1.4rem;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: 1.6rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+            th, td {
+                padding: 0.5rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Experiment Scheduling Rules</h1>
+
+        <div class="card">
+            <h2><span class="icon">📅</span> Date Availability Rules</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rule</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="rule-name">Max Sessions/Day</td>
+                        <td>≤14 concurrent sessions per day</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Max Intakes/Day</td>
+                        <td>≤3 instruction sessions (intake appointments) per date</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Weekends</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> No scheduling on Saturday/Sunday</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Blocked Dates</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> No scheduling on holidays (Dec 23 – Jan 4)</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Experiment Window</td>
+                        <td>28 consecutive available days required from start date</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2><span class="icon">⏰</span> Timeslot Rules (Intakes Only)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rule</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="rule-name">Available Slots</td>
+                        <td><code>11:00</code> <code>13:00</code> <code>17:00</code></td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">48-Hour Rule</td>
+                        <td>Slot must be ≥48 hours in the future</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Gap Requirement</td>
+                        <td>2.5 hours (150 min) minimum between <em>different</em> timeslots on same day</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Same-Slot Capacity</td>
+                        <td>≤2 concurrent intakes on the <em>exact same</em> timeslot</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Friday Block</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> No slots 10:00–14:29</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Monday Block</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> No slots before 13:00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2><span class="icon">🔢</span> Selection Requirements</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Required Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="rule-name">Session Dates</td>
+                        <td><span class="badge badge-blue">15</span></td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Backup Dates</td>
+                        <td><span class="badge badge-blue">3</span></td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Timeslot</td>
+                        <td><span class="badge badge-blue">1</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2><span class="icon">📆</span> Scheduling Windows</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Window</th>
+                        <th>Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="rule-name">First Session</td>
+                        <td>Within next <strong>14 days</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Follow-up Sessions</td>
+                        <td>Within <strong>21 days</strong> after first session</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Backup Sessions</td>
+                        <td>Within <strong>7 days</strong> after last regular session</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2><span class="icon">🧹</span> Equipment Days</h2>
+            <table>
+                <tbody>
+                    <tr>
+                        <td class="rule-name">Reservation Period</td>
+                        <td>From <strong>first session date</strong> through <strong>next workday after last session</strong> (for cleaning/return)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
