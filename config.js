@@ -29,7 +29,7 @@ const SCHEDULER_CONFIG = {
     TIME_SLOTS: [
         '11:00',
         '13:00',
-        '17:00',
+        '16:00',
     ],
     
     // Blocked dates - no instruction sessions may be scheduled on these dates
