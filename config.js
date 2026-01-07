@@ -35,19 +35,9 @@ const SCHEDULER_CONFIG = {
     // Blocked dates - no instruction sessions may be scheduled on these dates
     // Blocked dates are converted to a Set for efficient O(1) lookups.
     BLOCKED_DATES: new Set([
-        '2025-12-23',
-        '2025-12-24',
-        '2025-12-25',
-        '2025-12-26',
-        '2025-12-27',
-        '2025-12-28',
-        '2025-12-29',
-        '2025-12-30',
-        '2025-12-31',
-        '2026-01-01',
-        '2026-01-02',
-        '2026-01-03',
-        '2026-01-04',
+        '2026-01-09',
+        '2026-01-13',
+        '2026-01-16',
         
     ])
 };
