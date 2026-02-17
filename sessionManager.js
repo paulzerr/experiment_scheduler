@@ -27,14 +27,12 @@ class SessionManager {
     constructor(config) {
         this.config = config;
         this.selectedSessions = [];
-        this.selectedBackups = [];
         this.selectedTimeslot = null;
         this.dateCountMap = new Map();
         this.takenDateTimeSlots = new Map();
         excessiveLogSessionManager('SessionManager.constructor initialized new instance', {
             config: this.config,
             selectedSessions: this.selectedSessions,
-            selectedBackups: this.selectedBackups,
             selectedTimeslot: this.selectedTimeslot,
             dateCountMapSize: this.dateCountMap.size,
             takenDateTimeSlotsSize: this.takenDateTimeSlots.size
@@ -467,7 +465,6 @@ class SessionManager {
         excessiveLogSessionManager('SessionManager.selectFirstSession called', {
             requestedDate: serializeSessionManagerDate(date),
             currentSelectedSessions: serializeSessionManagerDateArray(this.selectedSessions),
-            currentSelectedBackups: serializeSessionManagerDateArray(this.selectedBackups),
             currentSelectedTimeslot: this.selectedTimeslot
         });
         const previousFirst = this.selectedSessions.length > 0 ? this.selectedSessions[0] : null;
@@ -490,10 +487,8 @@ class SessionManager {
             // Reset subsequent steps if the first session changes
             const needsReset = !previousFirst || previousFirst.getTime() !== date.getTime();
             if (needsReset) {
-                this.selectedBackups = [];
                 this.selectedTimeslot = null;
                 excessiveLogSessionManager('SessionManager.selectFirstSession reset downstream selections', {
-                    selectedBackups: this.selectedBackups,
                     selectedTimeslot: this.selectedTimeslot
                 });
             }
@@ -530,20 +525,17 @@ class SessionManager {
     selectFollowUpSession(date) {
         excessiveLogSessionManager('SessionManager.selectFollowUpSession called', {
             requestedDate: serializeSessionManagerDate(date),
-            selectedSessionsBefore: serializeSessionManagerDateArray(this.selectedSessions),
-            selectedBackupsBefore: serializeSessionManagerDateArray(this.selectedBackups)
+            selectedSessionsBefore: serializeSessionManagerDateArray(this.selectedSessions)
         });
         const sessionIndex = this._findDateIndex(date, this.selectedSessions);
         excessiveLogSessionManager('SessionManager.selectFollowUpSession computed existing index', { sessionIndex });
 
         if (sessionIndex > -1) {
             this.selectedSessions.splice(sessionIndex, 1);
-            this.selectedBackups = []; // Clear backups when regular sessions change
             const result = { success: true, deselected: true };
             excessiveLogSessionManager('SessionManager.selectFollowUpSession deselected existing session', {
                 result,
-                selectedSessionsAfter: serializeSessionManagerDateArray(this.selectedSessions),
-                selectedBackupsAfter: serializeSessionManagerDateArray(this.selectedBackups)
+                selectedSessionsAfter: serializeSessionManagerDateArray(this.selectedSessions)
             });
             return result;
         } else {
@@ -570,50 +562,6 @@ class SessionManager {
     }
 
     /**
-     * Selects or deselects a backup session.
-     * @param {Date} date - The selected date.
-     * @returns {Object} Result with success status and message.
-     */
-    selectBackupSession(date) {
-        excessiveLogSessionManager('SessionManager.selectBackupSession called', {
-            requestedDate: serializeSessionManagerDate(date),
-            selectedBackupsBefore: serializeSessionManagerDateArray(this.selectedBackups)
-        });
-        const backupIndex = this._findDateIndex(date, this.selectedBackups);
-        excessiveLogSessionManager('SessionManager.selectBackupSession computed existing index', { backupIndex });
-
-        if (backupIndex > -1) {
-            this.selectedBackups.splice(backupIndex, 1);
-            const result = { success: true, deselected: true };
-            excessiveLogSessionManager('SessionManager.selectBackupSession deselected existing backup', {
-                result,
-                selectedBackupsAfter: serializeSessionManagerDateArray(this.selectedBackups)
-            });
-            return result;
-        } else {
-            if (this.selectedBackups.length >= this.config.NUM_BACKUP_SESSIONS) {
-                const result = {
-                    success: false,
-                    error: `You can only select ${this.config.NUM_BACKUP_SESSIONS} backup sessions.`
-                };
-                excessiveLogSessionManager('SessionManager.selectBackupSession rejected due to backup session limit', {
-                    result,
-                    selectedBackupsLength: this.selectedBackups.length,
-                    maxBackups: this.config.NUM_BACKUP_SESSIONS
-                });
-                return result;
-            }
-            this.selectedBackups.push(date);
-            const result = { success: true, deselected: false };
-            excessiveLogSessionManager('SessionManager.selectBackupSession selected new backup session', {
-                result,
-                selectedBackupsAfter: serializeSessionManagerDateArray(this.selectedBackups)
-            });
-            return result;
-        }
-    }
-
-    /**
      * Sets the selected timeslot
      * @param {string} timeslot - Time slot string
      */
@@ -634,17 +582,13 @@ class SessionManager {
      */
     isReadyForReview() {
         const hasAllSessions = this.selectedSessions.length === this.config.TOTAL_SESSIONS;
-        const hasAllBackups = this.selectedBackups.length === this.config.NUM_BACKUP_SESSIONS;
         const hasTimeslot = this.selectedTimeslot !== null;
-        const result = hasAllSessions && hasAllBackups && hasTimeslot;
+        const result = hasAllSessions && hasTimeslot;
         excessiveLogSessionManager('SessionManager.isReadyForReview evaluated', {
             selectedSessionsLength: this.selectedSessions.length,
             requiredSessions: this.config.TOTAL_SESSIONS,
-            selectedBackupsLength: this.selectedBackups.length,
-            requiredBackups: this.config.NUM_BACKUP_SESSIONS,
             selectedTimeslot: this.selectedTimeslot,
             hasAllSessions,
-            hasAllBackups,
             hasTimeslot,
             result
         });
@@ -693,35 +637,20 @@ class SessionManager {
     }
 
     /**
-     * Checks if a date is already selected in the backup sessions.
-     * @param {Date} date - The date to check.
-     * @returns {boolean} True if the date is selected.
-     */
-    isDateSelectedInBackups(date) {
-        const selected = this._findDateIndex(date, this.selectedBackups) > -1;
-        excessiveLogSessionManager('SessionManager.isDateSelectedInBackups evaluated', {
-            date: serializeSessionManagerDate(date),
-            selected
-        });
-        return selected;
-    }
-
-    /**
-     * Gets sorted session and backup data for submission.
+     * Gets sorted session data for submission.
      * Converts Date objects to YYYY-MM-DD strings for the database.
      * @returns {Object} Sorted session data for submission.
      */
     getEquipmentDays() {
         excessiveLogSessionManager('SessionManager.getEquipmentDays called', {
-            selectedSessions: serializeSessionManagerDateArray(this.selectedSessions),
-            selectedBackups: serializeSessionManagerDateArray(this.selectedBackups)
+            selectedSessions: serializeSessionManagerDateArray(this.selectedSessions)
         });
         if (this.selectedSessions.length === 0) {
             excessiveLogSessionManager('SessionManager.getEquipmentDays returning empty array because no selected sessions');
             return [];
         }
 
-        const allDates = [...this.selectedSessions, ...this.selectedBackups].sort((a, b) => a.getTime() - b.getTime());
+        const allDates = [...this.selectedSessions].sort((a, b) => a.getTime() - b.getTime());
         const firstDay = allDates[0];
         const lastDay = allDates[allDates.length - 1];
         excessiveLogSessionManager('SessionManager.getEquipmentDays computed date boundaries', {
@@ -766,19 +695,16 @@ class SessionManager {
     getSubmissionData() {
         excessiveLogSessionManager('SessionManager.getSubmissionData called', {
             selectedSessions: serializeSessionManagerDateArray(this.selectedSessions),
-            selectedBackups: serializeSessionManagerDateArray(this.selectedBackups),
             selectedTimeslot: this.selectedTimeslot
         });
         const sortedSessions = [...this.selectedSessions].sort((a, b) => a.getTime() - b.getTime());
-        const sortedBackups = [...this.selectedBackups].sort((a, b) => a.getTime() - b.getTime());
         excessiveLogSessionManager('SessionManager.getSubmissionData sorted dates', {
-            sortedSessions: serializeSessionManagerDateArray(sortedSessions),
-            sortedBackups: serializeSessionManagerDateArray(sortedBackups)
+            sortedSessions: serializeSessionManagerDateArray(sortedSessions)
         });
 
         const submissionData = {
             session_dates: sortedSessions.map(d => DateManager.toYYYYMMDD(d)),
-            backup_dates: sortedBackups.map(d => DateManager.toYYYYMMDD(d)),
+            backup_dates: [],
             instruction_timeslot: this.selectedTimeslot,
             has_equipment_days: this.getEquipmentDays()
         };
@@ -793,11 +719,10 @@ class SessionManager {
     validateSelection() {
         excessiveLogSessionManager('SessionManager.validateSelection called', {
             selectedSessions: serializeSessionManagerDateArray(this.selectedSessions),
-            selectedBackups: serializeSessionManagerDateArray(this.selectedBackups),
             selectedTimeslot: this.selectedTimeslot
         });
         const conflicts = [];
-        const allSelectedDates = [...this.selectedSessions, ...this.selectedBackups];
+        const allSelectedDates = [...this.selectedSessions];
         excessiveLogSessionManager('SessionManager.validateSelection combined selected dates', {
             allSelectedDates: serializeSessionManagerDateArray(allSelectedDates)
         });
@@ -852,15 +777,12 @@ class SessionManager {
     reset() {
         excessiveLogSessionManager('SessionManager.reset called', {
             selectedSessionsBefore: serializeSessionManagerDateArray(this.selectedSessions),
-            selectedBackupsBefore: serializeSessionManagerDateArray(this.selectedBackups),
             selectedTimeslotBefore: this.selectedTimeslot
         });
         this.selectedSessions = [];
-        this.selectedBackups = [];
         this.selectedTimeslot = null;
         excessiveLogSessionManager('SessionManager.reset completed', {
             selectedSessionsAfter: this.selectedSessions,
-            selectedBackupsAfter: this.selectedBackups,
             selectedTimeslotAfter: this.selectedTimeslot
         });
     }

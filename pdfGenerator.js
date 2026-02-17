@@ -97,7 +97,7 @@ function generateAndDownloadPDF(scheduleData, participantId) {
     
     doc.setFont(undefined, 'bold');
     excessiveLogPdfGenerator('generateAndDownloadPDF set bold font for sessions heading');
-    doc.text(`Experiment Sessions (${scheduleData.session_dates.length}):`, 14, yPos);
+    doc.text(`Experiment Nights (${scheduleData.session_dates.length}):`, 14, yPos);
     excessiveLogPdfGenerator('generateAndDownloadPDF wrote sessions heading', {
         sessionsCount: scheduleData.session_dates.length,
         yPos
@@ -131,51 +131,6 @@ function generateAndDownloadPDF(scheduleData, participantId) {
         });
         yPos += 6;
         excessiveLogPdfGenerator('generateAndDownloadPDF advanced yPos after session line', { index, yPos });
-    });
-
-    yPos += 4;
-    excessiveLogPdfGenerator('generateAndDownloadPDF added spacing before backup section', { yPos });
-    // Add horizontal line
-    doc.line(14, yPos, 196, yPos);
-    excessiveLogPdfGenerator('generateAndDownloadPDF drew third separator line', { yPos });
-    yPos += 10;
-    excessiveLogPdfGenerator('generateAndDownloadPDF advanced yPos after third separator', { yPos });
-    
-    doc.setFont(undefined, 'bold');
-    excessiveLogPdfGenerator('generateAndDownloadPDF set bold font for backups heading');
-    doc.text(`Backup Sessions (${scheduleData.backup_dates.length}):`, 14, yPos);
-    excessiveLogPdfGenerator('generateAndDownloadPDF wrote backups heading', {
-        backupCount: scheduleData.backup_dates.length,
-        yPos
-    });
-    yPos += 6;
-    excessiveLogPdfGenerator('generateAndDownloadPDF advanced yPos after backups heading', { yPos });
-    doc.setFont(undefined, 'normal');
-    excessiveLogPdfGenerator('generateAndDownloadPDF set normal font for backups list');
-    scheduleData.backup_dates.forEach((date, index) => {
-        excessiveLogPdfGenerator('generateAndDownloadPDF iterating backup date', {
-            index,
-            date,
-            yPosBefore: yPos
-        });
-        if (yPos > 270) {
-            excessiveLogPdfGenerator('generateAndDownloadPDF adding page before backup line due to yPos overflow', {
-                yPosBeforePageBreak: yPos
-            });
-            doc.addPage();
-            yPos = 20;
-            excessiveLogPdfGenerator('generateAndDownloadPDF reset yPos after page break for backups', { yPos });
-        }
-        const backupDisplayDate = DateManager.formatForDisplay(DateManager.toUTCDate(date));
-        const backupLine = `  - Backup ${index + 1}: ${backupDisplayDate}`;
-        doc.text(backupLine, 20, yPos);
-        excessiveLogPdfGenerator('generateAndDownloadPDF wrote backup line', {
-            index,
-            backupLine,
-            yPos
-        });
-        yPos += 6;
-        excessiveLogPdfGenerator('generateAndDownloadPDF advanced yPos after backup line', { index, yPos });
     });
 
     excessiveLogPdfGenerator('generateAndDownloadPDF normalizing final yPos floor', { yPosBefore: yPos });

@@ -50,9 +50,6 @@ const elements = {
     followUpSection: document.getElementById('followUpSection'),
     followUpCalendar: document.getElementById('followUpCalendar'),
     followUpCount: document.getElementById('followUpCount'),
-    backupSection: document.getElementById('backupSection'),
-    backupCalendar: document.getElementById('backupCalendar'),
-    backupCount: document.getElementById('backupCount'),
     reviewButton: document.getElementById('reviewButton'),
     summarySection: document.getElementById('summarySection'),
     logOutput: document.getElementById('logOutput'),
@@ -432,9 +429,9 @@ function populateFollowUpCalendar() {
     excessiveLogScript('populateFollowUpCalendar resolved firstSessionDate', {
         firstSessionDate: serializeScriptDate(firstSessionDate)
     });
-    const dates = DateManager.generateFollowUpDates(
+    const dates = DateManager.generateExperimentDates(
         firstSessionDate,
-        SCHEDULER_CONFIG.FOLLOW_UP_WINDOW_DAYS
+        SCHEDULER_CONFIG.EXPERIMENT_WINDOW_DAYS
     );
     excessiveLogScript('populateFollowUpCalendar generated candidate follow-up dates', {
         generatedCount: dates.length,
@@ -464,45 +461,6 @@ function populateFollowUpCalendar() {
     updateFollowUpSectionTitle();
 }
 
-function populateBackupCalendar() {
-    excessiveLogScript('populateBackupCalendar started', {
-        selectedSessions: serializeScriptDateArray(sessionManager.selectedSessions),
-        selectedBackupsBeforeReset: serializeScriptDateArray(sessionManager.selectedBackups)
-    });
-    elements.backupCalendar.innerHTML = '';
-    excessiveLogScript('populateBackupCalendar cleared backup container');
-    sessionManager.selectedBackups = [];
-    excessiveLogScript('populateBackupCalendar reset selectedBackups in sessionManager');
-    updateBackupCount();
-
-    if (sessionManager.selectedSessions.length < SCHEDULER_CONFIG.TOTAL_SESSIONS) {
-        excessiveLogScript('populateBackupCalendar exiting early because selected session count is insufficient', {
-            selectedSessionsLength: sessionManager.selectedSessions.length,
-            required: SCHEDULER_CONFIG.TOTAL_SESSIONS
-        });
-        return;
-    }
-
-    const dates = DateManager.generateBackupDates(sessionManager.selectedSessions, SCHEDULER_CONFIG.BACKUP_WINDOW_DAYS);
-    excessiveLogScript('populateBackupCalendar generated candidate backup dates', {
-        generatedCount: dates.length,
-        dates: serializeScriptDateArray(dates)
-    });
-    
-    dates.forEach((date, index) => {
-        excessiveLogScript('populateBackupCalendar rendering backup date button', {
-            index,
-            date: serializeScriptDate(date)
-        });
-        createDateButton(date, elements.backupCalendar, 'backup');
-    });
-    
-    elements.backupSection.classList.remove('hidden');
-    excessiveLogScript('populateBackupCalendar showed backup section', {
-        classList: elements.backupSection.className
-    });
-}
-
 // --- Date Button Creation and Handling ---
 function createDateButton(date, container, type) {
     excessiveLogScript('createDateButton called', {
@@ -526,7 +484,7 @@ function createDateButton(date, container, type) {
     });
 
     const isAvailable = sessionManager.isDateAvailable(date);
-    const isSelected = sessionManager.isDateSelectedInSessions(date) || sessionManager.isDateSelectedInBackups(date);
+    const isSelected = sessionManager.isDateSelectedInSessions(date);
     excessiveLogScript('createDateButton evaluated availability/selection', {
         date: serializeScriptDate(date),
         isAvailable,
@@ -600,41 +558,8 @@ function handleDateSelection(date, type, button) {
                 });
                 updateFollowUpCount();
                 updateFollowUpSectionTitle();
-
-                if (sessionManager.selectedSessions.length === SCHEDULER_CONFIG.TOTAL_SESSIONS) {
-                    excessiveLogScript('handleDateSelection selected session count reached total; populating backups');
-                    populateBackupCalendar();
-                } else {
-                    // Hide if we drop below the required number
-                    excessiveLogScript('handleDateSelection selected session count below total; hiding backup section', {
-                        selectedSessionsLength: sessionManager.selectedSessions.length,
-                        required: SCHEDULER_CONFIG.TOTAL_SESSIONS
-                    });
-                    elements.backupSection.classList.add('hidden');
-                    sessionManager.selectedBackups = [];
-                    updateBackupCount();
-                    excessiveLogScript('handleDateSelection cleared backup selections due to reduced follow-up count');
-                }
             } else {
                 excessiveLogScript('handleDateSelection followUp selection failed; showing error', {
-                    error: result.error
-                });
-                showError(result.error);
-            }
-            break;
-
-        case 'backup':
-            excessiveLogScript('handleDateSelection entering backup branch');
-            result = sessionManager.selectBackupSession(date);
-            excessiveLogScript('handleDateSelection backup result', { result });
-            if (result.success) {
-                button.classList.toggle('selected', !result.deselected);
-                excessiveLogScript('handleDateSelection toggled backup button selected class', {
-                    selectedAfterToggle: !result.deselected
-                });
-                updateBackupCount();
-            } else {
-                excessiveLogScript('handleDateSelection backup selection failed; showing error', {
                     error: result.error
                 });
                 showError(result.error);
@@ -650,7 +575,6 @@ function handleDateSelection(date, type, button) {
     checkReviewButtonState();
     excessiveLogScript('handleDateSelection completed', {
         selectedSessions: serializeScriptDateArray(sessionManager.selectedSessions),
-        selectedBackups: serializeScriptDateArray(sessionManager.selectedBackups),
         selectedTimeslot: sessionManager.selectedTimeslot
     });
 }
@@ -686,15 +610,6 @@ function updateFollowUpCount() {
     });
 }
 
-function updateBackupCount() {
-    const backupCount = sessionManager.selectedBackups.length;
-    elements.backupCount.textContent = backupCount;
-    excessiveLogScript('updateBackupCount updated UI', {
-        backupCount,
-        elementTextContent: elements.backupCount.textContent
-    });
-}
-
 function updateFollowUpSectionTitle() {
     // This function can be simplified since we now use updateFollowUpCount() for the counter
     // The title stays static and the count is updated via the span element
@@ -717,14 +632,11 @@ function resetSubsequentSteps() {
     excessiveLogScript('resetSubsequentSteps called');
     elements.timeslotSection.classList.add('hidden');
     elements.followUpSection.classList.add('hidden');
-    elements.backupSection.classList.add('hidden');
     excessiveLogScript('resetSubsequentSteps hid downstream sections', {
         timeslotClassList: elements.timeslotSection.className,
-        followUpClassList: elements.followUpSection.className,
-        backupClassList: elements.backupSection.className
+        followUpClassList: elements.followUpSection.className
     });
     updateFollowUpCount();
-    updateBackupCount();
     excessiveLogScript('resetSubsequentSteps refreshed counters after reset');
 }
 
@@ -733,7 +645,6 @@ excessiveLogScript('Registering click listener for reviewButton');
 elements.reviewButton.addEventListener('click', () => {
     excessiveLogScript('reviewButton click handler started', {
         selectedSessions: serializeScriptDateArray(sessionManager.selectedSessions),
-        selectedBackups: serializeScriptDateArray(sessionManager.selectedBackups),
         selectedTimeslot: sessionManager.selectedTimeslot
     });
     const data = sessionManager.getSubmissionData();
@@ -741,7 +652,7 @@ elements.reviewButton.addEventListener('click', () => {
     
     elements.logOutput.textContent = `Participant ID: ${participantInfo.participant_id}\n\n` +
         `Instruction Session Time Slot: ${data.instruction_timeslot}\n\n` +
-        `Experiment Sessions (${data.session_dates.length}):\n` +
+        `Experiment Nights (${data.session_dates.length}):\n` +
         data.session_dates.map((dateStr, index) => {
             const date = DateManager.toUTCDate(dateStr);
             const prefix = index === 0 ? `First (Instruction at ${data.instruction_timeslot})` : `Session ${index + 1}`;
@@ -752,15 +663,6 @@ elements.reviewButton.addEventListener('click', () => {
                 normalizedDate: serializeScriptDate(date)
             });
             return `  - ${prefix}: ${DateManager.formatForDisplay(date)}`;
-        }).join('\n') + `\n\n` +
-        `Backup Sessions (${data.backup_dates.length}):\n` +
-        data.backup_dates.map(dateStr => {
-            const date = DateManager.toUTCDate(dateStr);
-            excessiveLogScript('reviewButton formatting backup session line', {
-                dateStr,
-                normalizedDate: serializeScriptDate(date)
-            });
-            return `  - ${DateManager.formatForDisplay(date)}`;
         }).join('\n');
     excessiveLogScript('reviewButton updated summary preformatted text', {
         logOutputLength: elements.logOutput.textContent.length

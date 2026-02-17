@@ -24,10 +24,9 @@ The app is a browser-based scheduler for one participant at a time.
 The participant receives a unique URL with `?uid=<link_id>`, then:
 1. Picks the instruction session date (which is also experiment night 1).
 2. Picks the instruction timeslot for that date.
-3. Picks 14 additional experiment nights (15 total sessions).
-4. Picks 3 backup nights.
-5. Reviews and submits.
-6. Downloads a generated PDF summary.
+3. Picks 17 additional experiment nights (18 total sessions in one list).
+4. Reviews and submits.
+5. Downloads a generated PDF summary.
 
 All availability is derived from the `schedules` table in Supabase and refreshed in real time (poll every 10 seconds).
 
@@ -86,13 +85,13 @@ No modules/imports are used. Every class/function is global in browser scope.
   - normalization to UTC date strings
   - parse/coerce to midnight UTC `Date`
   - display formatting
-  - follow-up/backup date generation
+  - experiment-night date generation
   - blocked/weekend checks
   - start-date search algorithm for valid experiment windows
 
 ### `sessionManager.js`
 - Stateful selection and validation engine:
-  - selected sessions/backups/timeslot
+  - selected sessions/timeslot
   - live availability maps from backend
   - per-date and per-timeslot constraints
   - submission payload construction
@@ -103,7 +102,6 @@ No modules/imports are used. Every class/function is global in browser scope.
 - Creates and downloads participant PDF summary with:
   - instruction session
   - all experiment sessions
-  - all backup sessions
   - location/contact text
 
 ### `script.js`
@@ -170,7 +168,8 @@ How code queries:
 
 Important behavior:
 - If `session_dates` is truthy for the participant row, app blocks scheduling (`"already submitted"`).
-- During availability counting, `has_equipment_days` takes priority over `session_dates + backup_dates`.
+- During availability counting, `has_equipment_days` takes priority over `session_dates`.
+- Legacy fallback still reads `backup_dates` when present in old rows.
 
 ## 6. Configuration semantics (`config.js`)
 
@@ -179,13 +178,11 @@ Important behavior:
 - `SUPABASE_CONFIG.ANON_KEY`: public anon key.
 
 ### Scheduler config
-- `TOTAL_SESSIONS = 15`
-- `NUM_BACKUP_SESSIONS = 3`
+- `TOTAL_SESSIONS = 18`
 - `MAX_CONCURRENT_SESSIONS = 14`
 - `SESSION1_WINDOW_DAYS = 14`
-- `FOLLOW_UP_WINDOW_DAYS = 21`
-- `BACKUP_WINDOW_DAYS = 7`
-- `MIN_AVAILABLE_DAYS = 28`
+- `EXPERIMENT_WINDOW_DAYS = 25`
+- `MIN_AVAILABLE_DAYS = 25`
 - `TIME_SLOTS = ['11:00','13:00','16:00']`
 - `BLOCKED_DATES = Set([...YYYY-MM-DD...])`
 
@@ -214,11 +211,8 @@ Core methods:
   - converts to `YYYY-MM-DD`, checks `SCHEDULER_CONFIG.BLOCKED_DATES`.
 
 Generators:
-- `generateFollowUpDates(baseDate, days)`:
+- `generateExperimentDates(baseDate, days)`:
   - Returns day+1 through day+N (does not include base day).
-- `generateBackupDates(sessionDates, days)`:
-  - Sorts sessions, starts from day after latest selected session.
-  - Returns N sequential dates.
 
 Start-date search algorithm:
 - `findExperimentStartDate(searchStartDate, dateCountMap, config)`:
@@ -243,7 +237,7 @@ for each day d in search horizon:
 
 for each candidate c in first 365 days:
   if c is valid first day:
-    if every day in [c, c+27] is not full:
+    if every day in [c, c+24] is not full:
       return c
 
 return null
@@ -253,7 +247,6 @@ return null
 
 State variables:
 - `selectedSessions: Date[]`
-- `selectedBackups: Date[]`
 - `selectedTimeslot: string|null`
 - `dateCountMap: Map<YYYY-MM-DD, number>`
 - `takenDateTimeSlots: Map<YYYY-MM-DD_HH:mm, number>`
@@ -300,29 +293,24 @@ Practical consequence with slots `11:00`, `13:00`, `16:00`:
 
 - `selectFirstSession(date)`:
   - clicking same first session deselects all sessions.
-  - selecting new first session resets backups and timeslot.
+  - selecting new first session resets downstream selections and timeslot.
 - `_findDateIndex(date, array)`:
   - date equality by `getTime()`.
 - `selectFollowUpSession(date)`:
   - toggle behavior.
   - max `TOTAL_SESSIONS` total sessions.
-  - changing follow-ups clears backups.
-- `selectBackupSession(date)`:
-  - toggle behavior.
-  - max `NUM_BACKUP_SESSIONS`.
 - `setTimeslot(timeslot)` sets selection.
 
 ### Readiness and counts
 - `isReadyForReview()` requires:
-  - exactly 15 sessions
-  - exactly 3 backups
+  - exactly 18 sessions
   - one timeslot selected
 - `getFollowUpCount()` returns `selectedSessions.length - 1` with floor at 0.
 
 ### Equipment days derivation
 
 `getEquipmentDays()`:
-1. Merge sessions + backups.
+1. Use selected sessions.
 2. Sort ascending.
 3. Find first selected day and last selected day.
 4. Compute cleaning day:
@@ -336,7 +324,7 @@ This is used as occupancy source for existing participants in later scheduling (
 
 `getSubmissionData()` returns:
 - `session_dates: sorted YYYY-MM-DD[]`
-- `backup_dates: sorted YYYY-MM-DD[]`
+- `backup_dates: []` (kept empty for compatibility)
 - `instruction_timeslot: selectedTimeslot`
 - `has_equipment_days: derived YYYY-MM-DD[]`
 
@@ -385,7 +373,7 @@ At load:
    - `takenDateTimeSlots`: per-date-timeslot instruction occupancy count.
 3. Occupancy source per row:
    - use `has_equipment_days` if present/truthy
-   - else use `session_dates + backup_dates`
+   - else use `session_dates` (plus legacy `backup_dates` if present)
 4. For timeslots:
    - take only first session date (`session_dates[0]`) + instruction timeslot.
    - normalize timeslot to first 5 chars (`HH:mm`).
@@ -413,22 +401,13 @@ At load:
 - Shows selected date text.
 - Unhides timeslot section.
 
-### Step 3 follow-up rendering
+### Step 3 experiment-night rendering
 
 `populateFollowUpCalendar()`:
-- Clears follow-up calendar.
+- Clears experiment-night calendar.
 - Updates counter.
-- Generates `FOLLOW_UP_WINDOW_DAYS` days after first session.
-- Renders each generated day as selectable follow-up date.
-- Shows section.
-
-### Step 4 backup rendering
-
-`populateBackupCalendar()`:
-- Clears backup UI + selected backups.
-- Requires 15 selected sessions first.
-- Generates `BACKUP_WINDOW_DAYS` dates after last selected session.
-- Renders backup date buttons.
+- Generates `EXPERIMENT_WINDOW_DAYS` days after first session.
+- Renders each generated day as selectable experiment-night date.
 - Shows section.
 
 ### Generic date button factory
@@ -437,7 +416,7 @@ At load:
 - stores ISO in `data-date` attribute.
 - renders `day month + weekday`.
 - disables if day is unavailable.
-- marks selected style if already in sessions/backups.
+- marks selected style if already in sessions.
 - binds click to `handleDateSelection`.
 
 ### Selection event handlers
@@ -446,15 +425,14 @@ At load:
 - clears error first.
 - delegates to sessionManager by type:
   - `session1`: set/reset first session and downstream sections.
-  - `followUp`: toggle; if session count hits 15 then render backups.
-  - `backup`: toggle with cap checks.
+  - `followUp`: toggle.
 - updates counters/visibility.
 - recalculates review button enabled state.
 
 `handleTimeslotSelection(timeSlot, button)`:
 - visual select one timeslot button.
 - stores timeslot in manager.
-- renders follow-up calendar.
+- renders experiment-night calendar.
 
 ### Review state
 
@@ -464,7 +442,7 @@ At load:
 
 Review click handler:
 - builds text summary into `<pre id="logOutput">`.
-- includes participant ID, chosen timeslot, session list, backup list.
+- includes participant ID, chosen timeslot, and session list.
 - unhides summary section and enables submit button.
 
 ### Submit state
@@ -514,11 +492,10 @@ This avoids removing user selections mid-flow while still reflecting new conflic
 4. Writes static location text.
 5. Writes experiment session list with labels:
    - session 1 includes instruction timeslot note.
-6. Writes backup list.
-7. Adds pages as needed when vertical cursor exceeds threshold.
-8. Adds closing contact text.
-9. Saves as `Experiment_Schedule_<participantId>.pdf`.
-10. Updates `#pdfStatus` to success if element exists.
+6. Adds pages as needed when vertical cursor exceeds threshold.
+7. Adds closing contact text.
+8. Saves as `Experiment_Schedule_<participantId>.pdf`.
+9. Updates `#pdfStatus` to success if element exists.
 
 ## 11. UI structure (`index.html` + `style.css`)
 
@@ -536,7 +513,6 @@ Core sections by ID:
 - `session1Calendar`
 - `timeslotSection`, `timeslotButtons`, `selectedDateDisplay`
 - `followUpSection`, `followUpCalendar`, `followUpCount`
-- `backupSection`, `backupCalendar`, `backupCount`
 - `reviewButton`
 - `summarySection`, `logOutput`
 - `submitButton`
@@ -579,7 +555,7 @@ If you rebuild this app from scratch, follow this order.
 
 5. Add `dateManager.js` class:
    - keep UTC normalization behavior.
-   - keep start-date search logic requiring 28-day non-full window.
+   - keep start-date search logic requiring 25-day non-full window.
 
 6. Add `sessionManager.js` class:
    - implement state, selection toggles, availability checks, timeslot constraints, payload and validation methods.
@@ -612,9 +588,8 @@ Participant/link flow:
 Step sequencing:
 - Scheduler content hidden until initialization succeeds.
 - Selecting first date reveals timeslots.
-- Selecting timeslot reveals follow-up options.
-- Reaching 15 sessions reveals backup options.
-- Review button only enabled at 15 sessions + 3 backups + 1 timeslot.
+- Selecting timeslot reveals experiment-night options.
+- Review button only enabled at 18 sessions + 1 timeslot.
 
 Availability/rules:
 - Dates at capacity are disabled.
@@ -651,4 +626,3 @@ Submission/race:
 ## 15. Minimal mental model (one-paragraph)
 
 Think of this app as a client-side finite workflow over shared capacity data: it continuously builds two maps from all schedule rows (day capacity and first-session timeslot occupancy), lets one participant assemble a constrained schedule in stages, then re-validates right before write to prevent race-condition conflicts, persists sorted date arrays plus derived equipment-reservation span, and issues a local PDF receipt.
-

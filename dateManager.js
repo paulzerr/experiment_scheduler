@@ -137,22 +137,22 @@ class DateManager {
 
 
     /**
-     * Generates follow-up dates starting from a base date.
+     * Generates experiment-night options starting from a base date.
      * @param {Date} baseDate - The base date.
      * @param {number} days - Number of days to generate.
      * @returns {Date[]} Array of Date objects.
      */
-    static generateFollowUpDates(baseDate, days) {
-        excessiveLogDateManager('DateManager.generateFollowUpDates called', {
+    static generateExperimentDates(baseDate, days) {
+        excessiveLogDateManager('DateManager.generateExperimentDates called', {
             baseDate: serializeDateManagerDate(baseDate),
             days
         });
         const startDate = this.toUTCDate(baseDate);
-        excessiveLogDateManager('DateManager.generateFollowUpDates normalized base date', {
+        excessiveLogDateManager('DateManager.generateExperimentDates normalized base date', {
             startDate: serializeDateManagerDate(startDate)
         });
         if (!startDate) {
-            excessiveLogDateManager('DateManager.generateFollowUpDates returning empty array because normalized date is null');
+            excessiveLogDateManager('DateManager.generateExperimentDates returning empty array because normalized date is null');
             return [];
         }
 
@@ -161,53 +161,12 @@ class DateManager {
             const newDate = new Date(startDate);
             newDate.setUTCDate(startDate.getUTCDate() + i);
             dates.push(newDate);
-            excessiveLogDateManager('DateManager.generateFollowUpDates pushed date', {
+            excessiveLogDateManager('DateManager.generateExperimentDates pushed date', {
                 index: i,
                 generated: serializeDateManagerDate(newDate)
             });
         }
-        excessiveLogDateManager('DateManager.generateFollowUpDates returning generated dates', {
-            count: dates.length,
-            preview: dates.map(d => d.toISOString())
-        });
-        return dates;
-    }
-
-    /**
-     * Generates backup dates starting from the day after the last session.
-     * @param {Date[]} sessionDates - Array of session dates.
-     * @param {number} days - Number of backup days to generate.
-     * @returns {Date[]} Array of Date objects.
-     */
-    static generateBackupDates(sessionDates, days) {
-        excessiveLogDateManager('DateManager.generateBackupDates called', {
-            sessionDatesCount: sessionDates?.length || 0,
-            days,
-            sessionDates
-        });
-        if (!sessionDates || sessionDates.length === 0) {
-            excessiveLogDateManager('DateManager.generateBackupDates returning empty array because sessionDates is empty');
-            return [];
-        }
-        
-        const sortedSessions = [...sessionDates].sort((a, b) => a.getTime() - b.getTime());
-        const lastSessionDate = sortedSessions[sortedSessions.length - 1];
-        excessiveLogDateManager('DateManager.generateBackupDates sorted sessions and selected last date', {
-            sortedSessions: sortedSessions.map(d => d.toISOString()),
-            lastSessionDate: serializeDateManagerDate(lastSessionDate)
-        });
-
-        const dates = [];
-        for (let i = 1; i <= days; i++) {
-            const newDate = new Date(lastSessionDate);
-            newDate.setUTCDate(lastSessionDate.getUTCDate() + i);
-            dates.push(newDate);
-            excessiveLogDateManager('DateManager.generateBackupDates pushed date', {
-                index: i,
-                generated: serializeDateManagerDate(newDate)
-            });
-        }
-        excessiveLogDateManager('DateManager.generateBackupDates returning generated dates', {
+        excessiveLogDateManager('DateManager.generateExperimentDates returning generated dates', {
             count: dates.length,
             preview: dates.map(d => d.toISOString())
         });
@@ -328,7 +287,7 @@ class DateManager {
             });
 
             if (isStartDateValid) {
-                // Rule 2: Check if the subsequent 28-day period is valid (not full)
+                // Rule 2: Check if the subsequent required period is valid (not full)
                 const experimentWindow = statusMap.slice(i, i + MIN_AVAILABLE_DAYS);
                 excessiveLogDateManager('DateManager.findExperimentStartDate extracted experiment window', {
                     candidateIndex: i,

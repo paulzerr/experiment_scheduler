@@ -18,21 +18,17 @@ const SUPABASE_CONFIG = {
 // Scheduler Configuration
 const SCHEDULER_CONFIG = {
     // Total number of experiment sessions to schedule
-    TOTAL_SESSIONS: 15,
-    
-    // Number of backup sessions
-    NUM_BACKUP_SESSIONS: 3,
+    TOTAL_SESSIONS: 18,
     
     // Maximum number of concurrent sessions (based on available devices)
     MAX_CONCURRENT_SESSIONS: 14,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 14, // Next 2 weeks for first available session
-    FOLLOW_UP_WINDOW_DAYS: 21, // 3 weeks after first session for remaining sessions
-    BACKUP_WINDOW_DAYS: 7,    // 7 days after last regular session for backups
+    EXPERIMENT_WINDOW_DAYS: 25, // 25 days after first session for remaining experiment nights
     
     // Minimum consecutive available days required for experiment sessions
-    MIN_AVAILABLE_DAYS: 28, // Ensure 28 consecutive days are available for follow-up sessions
+    MIN_AVAILABLE_DAYS: 25, // Ensure 25 consecutive days are available for experiment sessions
     
     // Time slot options for instruction sessions
     TIME_SLOTS: [
@@ -62,11 +58,9 @@ excessiveLogConfig('config.js loaded: Supabase configuration object created', {
 });
 excessiveLogConfig('config.js loaded: Scheduler configuration object created', {
     totalSessions: SCHEDULER_CONFIG.TOTAL_SESSIONS,
-    numBackupSessions: SCHEDULER_CONFIG.NUM_BACKUP_SESSIONS,
     maxConcurrentSessions: SCHEDULER_CONFIG.MAX_CONCURRENT_SESSIONS,
     session1WindowDays: SCHEDULER_CONFIG.SESSION1_WINDOW_DAYS,
-    followUpWindowDays: SCHEDULER_CONFIG.FOLLOW_UP_WINDOW_DAYS,
-    backupWindowDays: SCHEDULER_CONFIG.BACKUP_WINDOW_DAYS,
+    experimentWindowDays: SCHEDULER_CONFIG.EXPERIMENT_WINDOW_DAYS,
     minAvailableDays: SCHEDULER_CONFIG.MIN_AVAILABLE_DAYS,
     timeSlots: SCHEDULER_CONFIG.TIME_SLOTS,
     blockedDatesCount: SCHEDULER_CONFIG.BLOCKED_DATES.size,
