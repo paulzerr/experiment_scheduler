@@ -138,8 +138,8 @@
                         <td>≤3 instruction sessions (intake appointments) per date</td>
                     </tr>
                     <tr>
-                        <td class="rule-name">Weekends</td>
-                        <td><span class="badge badge-red">❌ Blocked</span> No scheduling on Saturday/Sunday</td>
+                        <td class="rule-name">Blocked Instruction Weekdays</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> Configurable via <code>INSTRUCTION_BLOCKED_WEEKDAYS</code> (default: Saturday/Sunday)</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Blocked Dates</td>
@@ -186,6 +186,10 @@
                     <tr>
                         <td class="rule-name">Monday Block</td>
                         <td><span class="badge badge-red">❌ Blocked</span> No slots before 13:00</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Config Date-Time Blocks</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> Configurable via <code>INSTRUCTION_BLOCKED_DATE_TIME_RANGES</code> (e.g. 2026-02-01, 13:00-14:00)</td>
                     </tr>
                 </tbody>
             </table>

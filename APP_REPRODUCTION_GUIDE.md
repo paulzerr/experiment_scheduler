@@ -86,7 +86,7 @@ No modules/imports are used. Every class/function is global in browser scope.
   - parse/coerce to midnight UTC `Date`
   - display formatting
   - experiment-night date generation
-  - blocked/weekend checks
+  - blocked date / blocked instruction-weekday checks
   - start-date search algorithm for valid experiment windows
 
 ### `sessionManager.js`
@@ -184,10 +184,13 @@ Important behavior:
 - `EXPERIMENT_WINDOW_DAYS = 25`
 - `MIN_AVAILABLE_DAYS = 25`
 - `TIME_SLOTS = ['11:00','13:00','16:00']`
+- `INSTRUCTION_BLOCKED_WEEKDAYS = Set(['Saturday','Sunday'])` (weekday names, case-insensitive)
 - `BLOCKED_DATES = Set([...YYYY-MM-DD...])`
+- `INSTRUCTION_BLOCKED_DATE_TIME_RANGES = [{ date:'YYYY-MM-DD', start:'HH:mm', end:'HH:mm' }, ...]`
 
 Note:
-- `BLOCKED_DATES` only applies to instruction-date eligibility (through checks in code paths).
+- `INSTRUCTION_BLOCKED_WEEKDAYS` and `BLOCKED_DATES` apply to instruction-date eligibility only.
+- `INSTRUCTION_BLOCKED_DATE_TIME_RANGES` applies to instruction-timeslot eligibility only and blocks slots when slot start is in `[start, end)`.
 
 ## 7. Date handling model (`dateManager.js`)
 
@@ -207,6 +210,8 @@ Core methods:
   - Returns human-readable weekday/month/day/year.
 - `isWeekend(date)`:
   - `getUTCDay()` in `{0,6}`.
+- `isInstructionWeekdayBlocked(date, config)`:
+  - compares the date's weekday name to `config.INSTRUCTION_BLOCKED_WEEKDAYS` (case-insensitive).
 - `isDateBlocked(date)`:
   - converts to `YYYY-MM-DD`, checks `SCHEDULER_CONFIG.BLOCKED_DATES`.
 
@@ -219,7 +224,7 @@ Start-date search algorithm:
   - Builds `statusMap` for 365 + `MIN_AVAILABLE_DAYS`.
   - For each candidate day `i` in first 365 days:
     - candidate must be:
-      - not weekend
+      - weekday not in `INSTRUCTION_BLOCKED_WEEKDAYS`
       - not globally blocked
       - not full (`count < MAX_CONCURRENT_SESSIONS`)
     - next `MIN_AVAILABLE_DAYS` window must contain no `isFull` day.
@@ -230,7 +235,7 @@ Pseudo:
 ```text
 for each day d in search horizon:
   status[d] = {
-    weekend?,
+    instructionWeekdayBlocked?,
     blocked?,
     full? (count >= 14)
   }
@@ -262,7 +267,7 @@ State variables:
 - `isDateAvailableForInstruction(date)` requires all:
   - date is available (`isDateAvailable`)
   - not blocked
-  - not weekend
+  - weekday not in `INSTRUCTION_BLOCKED_WEEKDAYS`
   - `< 3` instruction sessions already on that date
   - at least one valid timeslot remains
 
@@ -279,9 +284,11 @@ Rules enforced:
    - no slot from 10:00 to 14:29 (UTC-based day check).
 3. Monday block:
    - no slot before 13:00.
-4. Same-slot capacity:
+4. Config blocked date-time ranges:
+   - no slot when `(date, slotStart)` matches any configured range in `INSTRUCTION_BLOCKED_DATE_TIME_RANGES`.
+5. Same-slot capacity:
    - max 2 bookings at exact same date+time.
-5. Gap between different active slots:
+6. Gap between different active slots:
    - if another occupied slot exists on that date and absolute difference < 150 min, disallow.
 
 Practical consequence with slots `11:00`, `13:00`, `16:00`:
@@ -593,11 +600,12 @@ Step sequencing:
 
 Availability/rules:
 - Dates at capacity are disabled.
-- Weekends blocked for instruction start dates.
+- Instruction weekdays in `INSTRUCTION_BLOCKED_WEEKDAYS` are blocked for instruction start dates.
 - `BLOCKED_DATES` blocked for instruction start dates.
 - Timeslot blocked within 48 hours.
 - Friday 10:00-14:29 times blocked.
 - Monday <13:00 blocked.
+- `INSTRUCTION_BLOCKED_DATE_TIME_RANGES` blocks matching instruction timeslots.
 - Same exact date+timeslot allows up to 2 then blocks.
 - Other occupied slots within 150 minutes conflict.
 
@@ -613,7 +621,7 @@ Submission/race:
 
 2. `scheduling_rules.html` says blocked dates are Dec 23-Jan 4, while actual blocked dates in config are specific March/April 2026 dates.
 
-3. In `DateManager.findExperimentStartDate`, destructured `BLOCKED_DATES` and `dayOfWeek` variables are not directly used.
+3. `scheduling_rules.html` can drift from config (`INSTRUCTION_BLOCKED_WEEKDAYS`, `INSTRUCTION_BLOCKED_DATE_TIME_RANGES`, etc.) unless updated manually.
 
 4. Comment in `populateSession1Calendar` says "next 7 valid weekdays", but logic actually collects up to 14 instruction-eligible dates (based on config).
 

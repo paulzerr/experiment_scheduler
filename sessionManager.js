@@ -98,11 +98,11 @@ class SessionManager {
         const hasValidSlots = availableSlots.length > 0;
         const isDateAvailable = this.isDateAvailable(date);
         const isBlocked = DateManager.isDateBlocked(date);
-        const isWeekend = DateManager.isWeekend(date);
+        const isInstructionWeekdayBlocked = DateManager.isInstructionWeekdayBlocked(date, this.config);
         const passesInstructionCount = instructionSessionsCount < 3;
         const result = isDateAvailable &&
                        !isBlocked &&
-                       !isWeekend &&
+                       !isInstructionWeekdayBlocked &&
                        passesInstructionCount &&
                        hasValidSlots;
         excessiveLogSessionManager('SessionManager.isDateAvailableForInstruction evaluated', {
@@ -111,7 +111,7 @@ class SessionManager {
             hasValidSlots,
             isDateAvailable,
             isBlocked,
-            isWeekend,
+            isInstructionWeekdayBlocked,
             passesInstructionCount,
             result
         });
@@ -147,6 +147,133 @@ class SessionManager {
         }
         excessiveLogSessionManager('SessionManager.countInstructionSessionsOnDate returning', { dateString, count });
         return count;
+    }
+
+    /**
+     * Converts HH:mm to minutes from midnight.
+     * @param {string} timeString - Time string (HH:mm).
+     * @returns {number|null} Parsed minutes, or null if invalid.
+     */
+    _timeStringToMinutes(timeString) {
+        excessiveLogSessionManager('SessionManager._timeStringToMinutes called', { timeString });
+        if (typeof timeString !== 'string') {
+            excessiveLogSessionManager('SessionManager._timeStringToMinutes returning null because timeString is not a string', {
+                timeString
+            });
+            return null;
+        }
+
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const isValid = Number.isInteger(hours) &&
+                        Number.isInteger(minutes) &&
+                        hours >= 0 &&
+                        hours <= 23 &&
+                        minutes >= 0 &&
+                        minutes <= 59;
+        if (!isValid) {
+            excessiveLogSessionManager('SessionManager._timeStringToMinutes returning null because parsed time is invalid', {
+                timeString,
+                hours,
+                minutes
+            });
+            return null;
+        }
+
+        const result = (hours * 60) + minutes;
+        excessiveLogSessionManager('SessionManager._timeStringToMinutes returning parsed minutes', {
+            timeString,
+            result
+        });
+        return result;
+    }
+
+    /**
+     * Checks config-driven instruction blocked date-time ranges for a specific slot.
+     * @param {Date} date - The instruction date.
+     * @param {string} timeslot - Candidate instruction timeslot (HH:mm).
+     * @returns {boolean} True if blocked by config range.
+     */
+    isInstructionTimeslotBlockedByConfig(date, timeslot) {
+        excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig called', {
+            date: serializeSessionManagerDate(date),
+            timeslot
+        });
+
+        const dateString = DateManager.toYYYYMMDD(date);
+        const slotMinutes = this._timeStringToMinutes(timeslot);
+        if (!dateString || slotMinutes === null) {
+            excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig returning false because normalized input is invalid', {
+                dateString,
+                slotMinutes
+            });
+            return false;
+        }
+
+        const blockedRanges = this.config?.INSTRUCTION_BLOCKED_DATE_TIME_RANGES;
+        if (!Array.isArray(blockedRanges) || blockedRanges.length === 0) {
+            excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig returning false because no blocked ranges are configured', {
+                blockedRanges
+            });
+            return false;
+        }
+
+        for (const [index, range] of blockedRanges.entries()) {
+            if (!range || typeof range !== 'object') {
+                excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig skipped invalid range entry', {
+                    index,
+                    range
+                });
+                continue;
+            }
+
+            const rangeDateString = DateManager.toYYYYMMDD(range.date);
+            if (rangeDateString !== dateString) {
+                excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig skipped range with non-matching date', {
+                    index,
+                    dateString,
+                    rangeDateString
+                });
+                continue;
+            }
+
+            const startMinutes = this._timeStringToMinutes(range.start);
+            const endMinutes = this._timeStringToMinutes(range.end);
+            const isRangeValid = startMinutes !== null && endMinutes !== null && endMinutes > startMinutes;
+            if (!isRangeValid) {
+                excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig skipped invalid time range', {
+                    index,
+                    range,
+                    startMinutes,
+                    endMinutes
+                });
+                continue;
+            }
+
+            // Slot is blocked when its start time falls within [start, end).
+            const isBlocked = slotMinutes >= startMinutes && slotMinutes < endMinutes;
+            excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig evaluated candidate range', {
+                index,
+                dateString,
+                timeslot,
+                slotMinutes,
+                startMinutes,
+                endMinutes,
+                isBlocked
+            });
+            if (isBlocked) {
+                excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig returning true', {
+                    index,
+                    range
+                });
+                return true;
+            }
+        }
+
+        excessiveLogSessionManager('SessionManager.isInstructionTimeslotBlockedByConfig returning false after checking all ranges', {
+            dateString,
+            timeslot
+        });
+        return false;
     }
 
     /**
@@ -261,6 +388,15 @@ class SessionManager {
                     excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Monday block', { slot });
                     return false;
                 }
+            }
+
+            // 0.7 Check config-driven blocked date-time ranges
+            if (this.isInstructionTimeslotBlockedByConfig(slotDate, slot)) {
+                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by config blocked date-time range', {
+                    slot,
+                    slotDate: serializeSessionManagerDate(slotDate)
+                });
+                return false;
             }
 
             const slotMinutes = timeToMinutes(slot);
@@ -384,6 +520,15 @@ class SessionManager {
                 excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Monday block', { timeslot });
                 return false;
             }
+        }
+
+        // 0.7 Check config-driven blocked date-time ranges
+        if (this.isInstructionTimeslotBlockedByConfig(slotDate, timeslot)) {
+            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by config blocked date-time range', {
+                timeslot,
+                slotDate: serializeSessionManagerDate(slotDate)
+            });
+            return false;
         }
 
         const dateString = DateManager.toYYYYMMDD(date);

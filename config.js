@@ -36,6 +36,13 @@ const SCHEDULER_CONFIG = {
         '13:00',
         '16:00',
     ],
+
+    // Instruction-session weekdays that should be blocked
+    // Use full weekday names (case-insensitive), e.g. 'Saturday', 'Tuesday'
+    INSTRUCTION_BLOCKED_WEEKDAYS: new Set([
+        'Saturday',
+        'Sunday'
+    ]),
     
     // Blocked dates - no instruction sessions may be scheduled on these dates
     // Blocked dates are converted to a Set for efficient O(1) lookups.
@@ -49,7 +56,17 @@ const SCHEDULER_CONFIG = {
         '2026-03-23',
         '2026-03-27',
         '2026-04-03'
-    ])
+    ]),
+
+    // Blocked instruction date-time ranges.
+    // Only affects instruction timeslot eligibility; experiment-night selection is unchanged.
+    // Each range blocks slots where slot start time is within [start, end).
+    // Example: block 13:00 on Feb 1, 2026:
+    // { date: '2026-02-01', start: '13:00', end: '14:00' }
+    INSTRUCTION_BLOCKED_DATE_TIME_RANGES: [
+        { date: '2026-02-01', start: '13:00', end: '14:00' },
+        { date: '2026-02-02', start: '14:00', end: '18:00' }
+    ]
 };
 
 excessiveLogConfig('config.js loaded: Supabase configuration object created', {
@@ -63,6 +80,9 @@ excessiveLogConfig('config.js loaded: Scheduler configuration object created', {
     experimentWindowDays: SCHEDULER_CONFIG.EXPERIMENT_WINDOW_DAYS,
     minAvailableDays: SCHEDULER_CONFIG.MIN_AVAILABLE_DAYS,
     timeSlots: SCHEDULER_CONFIG.TIME_SLOTS,
+    instructionBlockedWeekdays: Array.from(SCHEDULER_CONFIG.INSTRUCTION_BLOCKED_WEEKDAYS),
     blockedDatesCount: SCHEDULER_CONFIG.BLOCKED_DATES.size,
-    blockedDates: Array.from(SCHEDULER_CONFIG.BLOCKED_DATES)
+    blockedDates: Array.from(SCHEDULER_CONFIG.BLOCKED_DATES),
+    instructionBlockedDateTimeRangesCount: SCHEDULER_CONFIG.INSTRUCTION_BLOCKED_DATE_TIME_RANGES.length,
+    instructionBlockedDateTimeRanges: SCHEDULER_CONFIG.INSTRUCTION_BLOCKED_DATE_TIME_RANGES
 });

@@ -205,6 +205,52 @@ class DateManager {
     }
 
     /**
+     * Checks whether a weekday is blocked for instruction sessions.
+     * Uses config-driven weekday blocking (weekday names, case-insensitive).
+     * @param {Date} date - The date to check.
+     * @param {object} config - Scheduler configuration object.
+     * @returns {boolean} True if the weekday is blocked for instruction sessions.
+     */
+    static isInstructionWeekdayBlocked(date, config = SCHEDULER_CONFIG) {
+        excessiveLogDateManager('DateManager.isInstructionWeekdayBlocked called', {
+            input: serializeDateManagerDate(date),
+            hasConfig: Boolean(config)
+        });
+        if (!date || isNaN(date.getTime())) {
+            excessiveLogDateManager('DateManager.isInstructionWeekdayBlocked returning false because input is invalid');
+            return false;
+        }
+
+        const blockedWeekdays = config?.INSTRUCTION_BLOCKED_WEEKDAYS;
+        if (!blockedWeekdays || typeof blockedWeekdays.has !== 'function') {
+            excessiveLogDateManager('DateManager.isInstructionWeekdayBlocked returning false because INSTRUCTION_BLOCKED_WEEKDAYS is missing/invalid', {
+                blockedWeekdays
+            });
+            return false;
+        }
+
+        const dayOfWeek = date.getUTCDay();
+        const weekdayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek];
+        const normalizedWeekdayName = weekdayName.toLowerCase();
+        const normalizedBlockedWeekdays = new Set(
+            Array.from(blockedWeekdays).map((value) => {
+                if (typeof value === 'string') return value.trim().toLowerCase();
+                if (typeof value === 'number') return value; // backward compatibility for legacy numeric config
+                return value;
+            })
+        );
+        const isBlocked = normalizedBlockedWeekdays.has(normalizedWeekdayName) || normalizedBlockedWeekdays.has(dayOfWeek);
+        excessiveLogDateManager('DateManager.isInstructionWeekdayBlocked evaluated', {
+            dayOfWeek,
+            weekdayName,
+            blockedWeekdays: Array.from(blockedWeekdays),
+            normalizedBlockedWeekdays: Array.from(normalizedBlockedWeekdays),
+            isBlocked
+        });
+        return isBlocked;
+    }
+
+    /**
      * Finds the first valid start date for an experiment based on a set of rules.
      * It pre-calculates the status of each day in a search range and then finds a valid slot.
      * @param {Date} searchStartDate - The date to start searching from.
@@ -218,12 +264,13 @@ class DateManager {
             dateCountMapSize: dateCountMap?.size || 0,
             config
         });
-        const { MIN_AVAILABLE_DAYS, MAX_CONCURRENT_SESSIONS, BLOCKED_DATES } = config;
+        const { MIN_AVAILABLE_DAYS, MAX_CONCURRENT_SESSIONS, BLOCKED_DATES, INSTRUCTION_BLOCKED_WEEKDAYS } = config;
         const searchRangeDays = 365;
         excessiveLogDateManager('DateManager.findExperimentStartDate using search parameters', {
             MIN_AVAILABLE_DAYS,
             MAX_CONCURRENT_SESSIONS,
             blockedDatesCount: BLOCKED_DATES?.size || 0,
+            instructionBlockedWeekdays: INSTRUCTION_BLOCKED_WEEKDAYS ? Array.from(INSTRUCTION_BLOCKED_WEEKDAYS) : [],
             searchRangeDays
         });
 
@@ -238,13 +285,13 @@ class DateManager {
             const dateStr = this.toYYYYMMDD(currentDate);
             const dayOfWeek = currentDate.getUTCDay();
             const bookingCount = dateCountMap.get(dateStr) || 0;
-            const isWeekend = this.isWeekend(currentDate);
+            const isInstructionWeekdayBlocked = this.isInstructionWeekdayBlocked(currentDate, config);
             const isGloballyBlocked = this.isDateBlocked(currentDate);
             const isFull = bookingCount >= MAX_CONCURRENT_SESSIONS;
             
             statusMap.push({
                 date: new Date(currentDate),
-                isWeekend: isWeekend,
+                isInstructionWeekdayBlocked: isInstructionWeekdayBlocked,
                 isGloballyBlocked: isGloballyBlocked,
                 isFull: isFull,
             });
@@ -253,7 +300,7 @@ class DateManager {
                 dateStr,
                 dayOfWeek,
                 bookingCount,
-                isWeekend,
+                isInstructionWeekdayBlocked,
                 isGloballyBlocked,
                 isFull
             });
@@ -278,7 +325,7 @@ class DateManager {
             });
 
             // Rule 1: Check if the potential start date is a valid first session day
-            const isStartDateValid = !potentialStartDate.isWeekend &&
+            const isStartDateValid = !potentialStartDate.isInstructionWeekdayBlocked &&
                                      !potentialStartDate.isGloballyBlocked &&
                                      !potentialStartDate.isFull;
             excessiveLogDateManager('DateManager.findExperimentStartDate start-date validity evaluated', {
