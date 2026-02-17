@@ -1,5 +1,14 @@
 // config.js - Configuration settings for the Experiment Scheduler
 
+const EXCESSIVE_LOG_MARKER_CONFIG = '[EXCESSIVE_TRACE]';
+function excessiveLogConfig(message, payload) {
+    if (payload === undefined) {
+        console.log(EXCESSIVE_LOG_MARKER_CONFIG, message);
+    } else {
+        console.log(EXCESSIVE_LOG_MARKER_CONFIG, message, payload);
+    }
+}
+
 // Supabase Configuration
 const SUPABASE_CONFIG = {
     URL: 'https://xiupbovpolvimeayboig.supabase.co',
@@ -46,3 +55,20 @@ const SCHEDULER_CONFIG = {
         '2026-04-03'
     ])
 };
+
+excessiveLogConfig('config.js loaded: Supabase configuration object created', {
+    url: SUPABASE_CONFIG.URL,
+    anonKeyLength: SUPABASE_CONFIG.ANON_KEY.length
+});
+excessiveLogConfig('config.js loaded: Scheduler configuration object created', {
+    totalSessions: SCHEDULER_CONFIG.TOTAL_SESSIONS,
+    numBackupSessions: SCHEDULER_CONFIG.NUM_BACKUP_SESSIONS,
+    maxConcurrentSessions: SCHEDULER_CONFIG.MAX_CONCURRENT_SESSIONS,
+    session1WindowDays: SCHEDULER_CONFIG.SESSION1_WINDOW_DAYS,
+    followUpWindowDays: SCHEDULER_CONFIG.FOLLOW_UP_WINDOW_DAYS,
+    backupWindowDays: SCHEDULER_CONFIG.BACKUP_WINDOW_DAYS,
+    minAvailableDays: SCHEDULER_CONFIG.MIN_AVAILABLE_DAYS,
+    timeSlots: SCHEDULER_CONFIG.TIME_SLOTS,
+    blockedDatesCount: SCHEDULER_CONFIG.BLOCKED_DATES.size,
+    blockedDates: Array.from(SCHEDULER_CONFIG.BLOCKED_DATES)
+});
