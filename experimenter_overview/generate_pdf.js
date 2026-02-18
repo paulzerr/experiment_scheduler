@@ -41,9 +41,15 @@ async function handleGeneratePdf() {
             return;
         }
 
+        const allExperimentDates = [
+            ...(data.session_dates || []),
+            ...(data.backup_dates || [])
+        ];
+
         // Use the existing PDF generation function
         generateAndDownloadPDF({
             ...data,
+            session_dates: allExperimentDates,
             participant_id: data.participant_id // Ensure the ID is passed correctly
         }, data.participant_id);
 
