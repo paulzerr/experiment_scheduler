@@ -711,11 +711,22 @@ elements.submitButton.addEventListener('click', async () => {
             return;
         }
 
+        const selectionSnapshot = sessionManager.getSubmissionData();
+        const allSelectedSessionDates = selectionSnapshot.session_dates || [];
+        const sessionDatesForStorage = allSelectedSessionDates.slice(0, 15);
+        const backupDatesForStorage = allSelectedSessionDates.slice(15);
         const submissionData = {
-            ...sessionManager.getSubmissionData(),
+            ...selectionSnapshot,
+            session_dates: sessionDatesForStorage,
+            backup_dates: backupDatesForStorage,
             submission_timestamp: new Date().toISOString()
         };
         excessiveLogScript('submitButton click handler constructed submissionData', submissionData);
+        excessiveLogScript('submitButton click handler split selected dates for storage', {
+            allSelectedSessionDates,
+            sessionDatesForStorage,
+            backupDatesForStorage
+        });
 
         excessiveLogScript('submitButton click handler updating schedules row in Supabase', {
             link_id: participantInfo.link_id
@@ -736,8 +747,12 @@ elements.submitButton.addEventListener('click', async () => {
         disableAllDateButtons();
         disableAllTimeslotButtons();
         excessiveLogScript('submitButton click handler disabled all interactive selection controls');
-        generateAndDownloadPDF({
+        const pdfData = {
             ...submissionData,
+            session_dates: allSelectedSessionDates
+        };
+        generateAndDownloadPDF({
+            ...pdfData,
             participant_id: participantInfo.link_id
         }, participantInfo.participant_id);
         excessiveLogScript('submitButton click handler invoked PDF generation', {
@@ -751,7 +766,7 @@ elements.submitButton.addEventListener('click', async () => {
         elements.downloadPdfButton.addEventListener('click', () => {
             excessiveLogScript('downloadPdfButton click handler triggered re-download');
             generateAndDownloadPDF({
-                ...submissionData,
+                ...pdfData,
                 participant_id: participantInfo.link_id
             }, participantInfo.participant_id);
             excessiveLogScript('downloadPdfButton click handler invoked PDF generation');
