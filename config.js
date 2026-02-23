@@ -62,7 +62,7 @@ const SCHEDULER_CONFIG = {
         '2026-04-06', // Eastern
         '2026-04-27', // Kingsday
         '2026-05-16' // Hemelvaart
-        '2026-05-25', // Pinksteren        
+        '2026-05-25' // Pinksteren        
     ]),
 
 
