@@ -21,7 +21,7 @@ const SCHEDULER_CONFIG = {
     TOTAL_SESSIONS: 18,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 14,
+    MAX_CONCURRENT_SESSIONS: 13,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 14,
