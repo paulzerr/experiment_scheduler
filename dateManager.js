@@ -118,16 +118,16 @@ class DateManager {
     static getNextWorkDay(date) {
         excessiveLogDateManager('DateManager.getNextWorkDay called', { input: serializeDateManagerDate(date) });
         const nextDay = new Date(date);
-        nextDay.setDate(date.getDate() + 1);
+        nextDay.setUTCDate(date.getUTCDate() + 1);
         excessiveLogDateManager('DateManager.getNextWorkDay initial next day computed', { nextDay: serializeDateManagerDate(nextDay) });
         
-        const dayOfWeek = nextDay.getDay();
+        const dayOfWeek = nextDay.getUTCDay();
         excessiveLogDateManager('DateManager.getNextWorkDay evaluated dayOfWeek', { dayOfWeek });
         if (dayOfWeek === 0) { // Sunday
-            nextDay.setDate(nextDay.getDate() + 1);
+            nextDay.setUTCDate(nextDay.getUTCDate() + 1);
             excessiveLogDateManager('DateManager.getNextWorkDay adjusted Sunday to Monday', { adjusted: serializeDateManagerDate(nextDay) });
         } else if (dayOfWeek === 6) { // Saturday
-            nextDay.setDate(nextDay.getDate() + 2);
+            nextDay.setUTCDate(nextDay.getUTCDate() + 2);
             excessiveLogDateManager('DateManager.getNextWorkDay adjusted Saturday to Monday', { adjusted: serializeDateManagerDate(nextDay) });
         }
         

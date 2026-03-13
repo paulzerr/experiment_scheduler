@@ -183,6 +183,7 @@ async function fetchAndUpdateAvailability() {
             schedule
         });
         const allDates = schedule.has_equipment_days || (schedule.session_dates || []).concat(schedule.backup_dates || []);
+        const uniqueDateKeysForSchedule = new Set();
         excessiveLogScript('fetchAndUpdateAvailability resolved occupancy date source for schedule', {
             scheduleIndex,
             source: schedule.has_equipment_days ? 'has_equipment_days' : 'session_dates_plus_backup_dates',
@@ -204,6 +205,14 @@ async function fetchAndUpdateAvailability() {
             }
             const dateKey = DateManager.toYYYYMMDD(DateManager.toUTCDate(dateStr));
             if (dateKey) {
+                if (uniqueDateKeysForSchedule.has(dateKey)) {
+                    excessiveLogScript('fetchAndUpdateAvailability skipped duplicate occupancy date for schedule', {
+                        scheduleIndex,
+                        dateKey
+                    });
+                    return;
+                }
+                uniqueDateKeysForSchedule.add(dateKey);
                 const count = (dateCountMap.get(dateKey) || 0) + 1;
                 dateCountMap.set(dateKey, count);
                 excessiveLogScript('fetchAndUpdateAvailability incremented dateCountMap entry', {

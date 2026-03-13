@@ -806,7 +806,7 @@ class SessionManager {
 
         // Calculate the cleaning day
         const cleaningDay = new Date(lastDay);
-        cleaningDay.setDate(cleaningDay.getDate() + 1);
+        cleaningDay.setUTCDate(cleaningDay.getUTCDate() + 1);
         const finalCleaningDay = DateManager.getNextWorkDay(cleaningDay);
         excessiveLogSessionManager('SessionManager.getEquipmentDays computed cleaning day boundaries', {
             cleaningDay: serializeSessionManagerDate(cleaningDay),
@@ -824,7 +824,7 @@ class SessionManager {
                 storedDay: equipmentDays[equipmentDays.length - 1],
                 runningCount: equipmentDays.length
             });
-            currentDay.setDate(currentDay.getDate() + 1);
+            currentDay.setUTCDate(currentDay.getUTCDate() + 1);
             excessiveLogSessionManager('SessionManager.getEquipmentDays incremented day cursor', {
                 nextCurrentDay: serializeSessionManagerDate(currentDay)
             });
