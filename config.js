@@ -21,7 +21,7 @@ const SCHEDULER_CONFIG = {
     TOTAL_SESSIONS: 18,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 14,
+    MAX_CONCURRENT_SESSIONS: 13,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 14,
@@ -58,7 +58,11 @@ const SCHEDULER_CONFIG = {
         '2026-03-20', 
         '2026-03-23',
         '2026-03-27',
-        '2026-04-03'
+        '2026-04-03', // Eastern
+        '2026-04-06', // Eastern
+        '2026-04-27', // Kingsday
+        '2026-05-16', // Hemelvaart
+        '2026-05-25' // Pinksteren        
     ]),
 
 
