@@ -24,7 +24,7 @@ const SCHEDULER_CONFIG = {
     MAX_CONCURRENT_SESSIONS: 13,
     
     // Time windows for scheduling (in days)
-    SESSION1_WINDOW_DAYS: 14,
+    SESSION1_WINDOW_DAYS: 7,
     EXPERIMENT_WINDOW_DAYS: 25, 
     
     // Minimum consecutive available days required for experiment sessions
