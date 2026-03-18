@@ -39,6 +39,7 @@ const SCHEDULER_CONFIG = {
 
     // Instruction-session weekdays that should be blocked
     INSTRUCTION_BLOCKED_WEEKDAYS: new Set([
+        'Wednesday',
         'Saturday',
         'Sunday'
     ]),
