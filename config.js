@@ -62,7 +62,9 @@ const SCHEDULER_CONFIG = {
         '2026-04-03', // Eastern
         '2026-04-06', // Eastern
         '2026-04-27', // Kingsday
-        '2026-05-16', // Hemelvaart
+        '2026-05-05', // Liberation day building closed
+        '2025-05-14', // Hemelvaart building closed
+        '2025-05-15', // Hemelvaart building closed
         '2026-05-25' // Pinksteren        
     ]),
 
