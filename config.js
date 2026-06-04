@@ -24,7 +24,7 @@ const SCHEDULER_CONFIG = {
     MAX_CONCURRENT_SESSIONS: 16,
     
     // Time windows for scheduling (in days)
-    SESSION1_WINDOW_DAYS: 7,
+    SESSION1_WINDOW_DAYS: 5,
     EXPERIMENT_WINDOW_DAYS: 25, 
     
     // Minimum consecutive available days required for experiment sessions
@@ -39,7 +39,6 @@ const SCHEDULER_CONFIG = {
 
     // Instruction-session weekdays that should be blocked
     INSTRUCTION_BLOCKED_WEEKDAYS: new Set([
-        'Wednesday',
         'Saturday',
         'Sunday'
     ]),
@@ -65,7 +64,38 @@ const SCHEDULER_CONFIG = {
         '2026-05-05', // Liberation day building closed
         '2026-05-14', // Hemelvaart building closed
         '2026-05-15', // Hemelvaart building closed
-        '2026-05-25' // Pinksteren        
+        '2026-05-25', // Pinksteren   
+        '2026-07-01',
+        '2026-07-02',
+        '2026-07-03',
+        '2026-07-04',
+        '2026-07-05',
+        '2026-07-06',
+        '2026-07-07',
+        '2026-07-08',
+        '2026-07-09',
+        '2026-07-10',
+        '2026-07-11',
+        '2026-07-12',
+        '2026-07-13',
+        '2026-07-14',
+        '2026-07-15',
+        '2026-07-16',
+        '2026-07-17',
+        '2026-07-18',
+        '2026-07-19',
+        '2026-07-20',
+        '2026-07-21',
+        '2026-07-22',
+        '2026-07-23',
+        '2026-07-24',
+        '2026-07-25',
+        '2026-07-26',
+        '2026-07-27',
+        '2026-07-28',
+        '2026-07-29',
+        '2026-07-30',
+        '2026-07-31'
     ]),
 
 
