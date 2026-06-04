@@ -35,7 +35,7 @@ const SCHEDULER_CONFIG = {
     ],
 
     // Minimum gap between different intake timeslots on the same date
-    MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS: 150,
+    MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS: 119,
 
     // Minimum lead time before an intake timeslot can be booked
     INTAKE_MIN_ADVANCE_HOURS: 24,
