@@ -22,6 +22,29 @@ const SCHEDULER_CONFIG = {
     
     // Maximum number of concurrent sessions (based on available devices)
     MAX_CONCURRENT_SESSIONS: 16,
+
+    // Maximum number of concurrent intakes on the exact same timeslot
+    MAX_INTAKES_PER_TIMESLOT: 2,
+
+    // Allowed daily intake distributions across timeslots.
+    // Examples: 2 double + 1 single, 1 double + 2 single, or 4 single.
+    ALLOWED_DAILY_INTAKE_PATTERNS: [
+        { doubleTimeslots: 2, singleTimeslots: 1 },
+        { doubleTimeslots: 1, singleTimeslots: 2 },
+        { doubleTimeslots: 0, singleTimeslots: 4 }
+    ],
+
+    // Minimum gap between different intake timeslots on the same date
+    MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS: 150,
+
+    // Minimum lead time before an intake timeslot can be booked
+    INTAKE_MIN_ADVANCE_HOURS: 24,
+
+    // Latest allowed intake timeslot start on Fridays
+    FRIDAY_LAST_INTAKE_TIME: '18:00',
+
+    // Extra calendar days to reserve equipment after the last data collection day
+    EQUIPMENT_CLEANING_DELAY_DAYS: 1,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 5,
@@ -109,6 +132,12 @@ excessiveLogConfig('config.js loaded: Supabase configuration object created', {
 excessiveLogConfig('config.js loaded: Scheduler configuration object created', {
     totalSessions: SCHEDULER_CONFIG.TOTAL_SESSIONS,
     maxConcurrentSessions: SCHEDULER_CONFIG.MAX_CONCURRENT_SESSIONS,
+    maxIntakesPerTimeslot: SCHEDULER_CONFIG.MAX_INTAKES_PER_TIMESLOT,
+    allowedDailyIntakePatterns: SCHEDULER_CONFIG.ALLOWED_DAILY_INTAKE_PATTERNS,
+    minutesBetweenDifferentIntakeTimeslots: SCHEDULER_CONFIG.MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS,
+    intakeMinAdvanceHours: SCHEDULER_CONFIG.INTAKE_MIN_ADVANCE_HOURS,
+    fridayLastIntakeTime: SCHEDULER_CONFIG.FRIDAY_LAST_INTAKE_TIME,
+    equipmentCleaningDelayDays: SCHEDULER_CONFIG.EQUIPMENT_CLEANING_DELAY_DAYS,
     session1WindowDays: SCHEDULER_CONFIG.SESSION1_WINDOW_DAYS,
     experimentWindowDays: SCHEDULER_CONFIG.EXPERIMENT_WINDOW_DAYS,
     minAvailableDays: SCHEDULER_CONFIG.MIN_AVAILABLE_DAYS,

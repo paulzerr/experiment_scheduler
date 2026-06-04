@@ -179,8 +179,14 @@ Important behavior:
 
 ### Scheduler config
 - `TOTAL_SESSIONS = 18`
-- `MAX_CONCURRENT_SESSIONS = 14`
-- `SESSION1_WINDOW_DAYS = 14`
+- `MAX_CONCURRENT_SESSIONS = 16`
+- `MAX_INTAKES_PER_TIMESLOT = 2`
+- `ALLOWED_DAILY_INTAKE_PATTERNS = [{ doubleTimeslots:2, singleTimeslots:1 }, { doubleTimeslots:1, singleTimeslots:2 }, { doubleTimeslots:0, singleTimeslots:4 }]`
+- `MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS = 150`
+- `INTAKE_MIN_ADVANCE_HOURS = 24`
+- `FRIDAY_LAST_INTAKE_TIME = '18:00'`
+- `EQUIPMENT_CLEANING_DELAY_DAYS = 1`
+- `SESSION1_WINDOW_DAYS = 5`
 - `EXPERIMENT_WINDOW_DAYS = 25`
 - `MIN_AVAILABLE_DAYS = 25`
 - `TIME_SLOTS = ['11:00','13:00','16:00']`
@@ -268,7 +274,6 @@ State variables:
   - date is available (`isDateAvailable`)
   - not blocked
   - weekday not in `INSTRUCTION_BLOCKED_WEEKDAYS`
-  - `< 3` instruction sessions already on that date
   - at least one valid timeslot remains
 
 ### Timeslot availability logic
@@ -278,22 +283,27 @@ Two methods implement near-identical logic:
 - single: `isTimeslotAvailable(timeslot, date)`
 
 Rules enforced:
-1. 48-hour rule:
-   - slot datetime must be >= now + 48 hours.
+1. Configured advance rule:
+   - slot datetime must be >= now + `INTAKE_MIN_ADVANCE_HOURS`.
 2. Friday block:
    - no slot from 10:00 to 14:29 (UTC-based day check).
-3. Monday block:
+3. Friday latest intake cutoff:
+   - no Friday slot with a start time later than `FRIDAY_LAST_INTAKE_TIME`.
+4. Monday block:
    - no slot before 13:00.
-4. Config blocked date-time ranges:
+5. Config blocked date-time ranges:
    - no slot when `(date, slotStart)` matches any configured range in `INSTRUCTION_BLOCKED_DATE_TIME_RANGES`.
-5. Same-slot capacity:
-   - max 2 bookings at exact same date+time.
-6. Gap between different active slots:
-   - if another occupied slot exists on that date and absolute difference < 150 min, disallow.
+6. Daily intake pattern:
+   - candidate booking must fit one of `ALLOWED_DAILY_INTAKE_PATTERNS`.
+   - current allowed scenarios are up to two double timeslots plus one single, one double plus two singles, or four singles.
+7. Same-slot capacity:
+   - max `MAX_INTAKES_PER_TIMESLOT` bookings at exact same date+time.
+8. Gap between different active slots:
+   - if another occupied slot exists on that date and absolute difference < `MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS`, disallow.
 
 Practical consequence with slots `11:00`, `13:00`, `16:00`:
 - `11:00` and `13:00` conflict (120 min apart).
-- `13:00` and `16:00` conflict (180 min apart, so actually allowed because 180 >= 150).
+- `13:00` and `16:00` are allowed because 180 >= 150.
 - `11:00` and `16:00` allowed.
 
 ### Selection APIs
@@ -321,8 +331,7 @@ Practical consequence with slots `11:00`, `13:00`, `16:00`:
 2. Sort ascending.
 3. Find first selected day and last selected day.
 4. Compute cleaning day:
-   - start at day after last selected day.
-   - then jump to next workday via `DateManager.getNextWorkDay`.
+   - add `EQUIPMENT_CLEANING_DELAY_DAYS` calendar day(s) to the last selected day.
 5. Return every calendar day from first selected through final cleaning day (inclusive), as `YYYY-MM-DD`.
 
 This is used as occupancy source for existing participants in later scheduling (`fetchAndUpdateAvailability`).
@@ -602,12 +611,14 @@ Availability/rules:
 - Dates at capacity are disabled.
 - Instruction weekdays in `INSTRUCTION_BLOCKED_WEEKDAYS` are blocked for instruction start dates.
 - `BLOCKED_DATES` blocked for instruction start dates.
-- Timeslot blocked within 48 hours.
+- Timeslot blocked within `INTAKE_MIN_ADVANCE_HOURS`.
 - Friday 10:00-14:29 times blocked.
+- Friday times later than `FRIDAY_LAST_INTAKE_TIME` are blocked.
 - Monday <13:00 blocked.
 - `INSTRUCTION_BLOCKED_DATE_TIME_RANGES` blocks matching instruction timeslots.
-- Same exact date+timeslot allows up to 2 then blocks.
-- Other occupied slots within 150 minutes conflict.
+- Same exact date+timeslot allows up to `MAX_INTAKES_PER_TIMESLOT` then blocks.
+- Same date must fit `ALLOWED_DAILY_INTAKE_PATTERNS`; current allowed scenarios are up to two double timeslots plus one single, one double plus two singles, or four singles.
+- Other occupied slots within `MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS` minutes conflict.
 
 Submission/race:
 - If availability changes before submit and selection is invalid, user gets conflict message and page reloads after 5s.
@@ -617,19 +628,13 @@ Submission/race:
 
 ## 14. Known quirks and mismatches to preserve (if reproducing current behavior)
 
-1. `scheduling_rules.html` says available slots include `17:00`, but scheduler config uses `16:00`.
+1. `scheduling_rules.html` can drift from config (`TIME_SLOTS`, `BLOCKED_DATES`, `INSTRUCTION_BLOCKED_WEEKDAYS`, `INSTRUCTION_BLOCKED_DATE_TIME_RANGES`, etc.) unless updated manually.
 
-2. `scheduling_rules.html` says blocked dates are Dec 23-Jan 4, while actual blocked dates in config are specific March/April 2026 dates.
+2. Comment in `populateSession1Calendar` says "next 7 valid weekdays", but logic actually collects up to 14 instruction-eligible dates (based on config).
 
-3. `scheduling_rules.html` can drift from config (`INSTRUCTION_BLOCKED_WEEKDAYS`, `INSTRUCTION_BLOCKED_DATE_TIME_RANGES`, etc.) unless updated manually.
+3. Mix of local-time methods (`getDate/setDate`) and UTC methods exists in some utilities; behavior still works but can be timezone-sensitive at edges.
 
-4. Comment in `populateSession1Calendar` says "next 7 valid weekdays", but logic actually collects up to 14 instruction-eligible dates (based on config).
-
-5. `countInstructionSessionsOnDate` counts unique keys in map, not summed slot counts; this can undercount if one slot has count > 1.
-
-6. Mix of local-time methods (`getDate/setDate`) and UTC methods exists in some utilities; behavior still works but can be timezone-sensitive at edges.
-
-7. `createDateButton` only checks generic date capacity for disabling; specific instruction constraints are handled when source lists are generated, not per-button universal logic.
+4. `createDateButton` only checks generic date capacity for disabling; specific instruction constraints are handled when source lists are generated, not per-button universal logic.
 
 ## 15. Minimal mental model (one-paragraph)
 

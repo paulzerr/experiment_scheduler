@@ -131,11 +131,11 @@
                 <tbody>
                     <tr>
                         <td class="rule-name">Max Sessions/Day</td>
-                        <td>≤14 concurrent sessions per day</td>
+                        <td>Configurable via <code>MAX_CONCURRENT_SESSIONS</code> (current: ≤16 concurrent sessions per day)</td>
                     </tr>
                     <tr>
-                        <td class="rule-name">Max Intakes/Day</td>
-                        <td>≤3 instruction sessions (intake appointments) per date</td>
+                        <td class="rule-name">Daily Intake Patterns</td>
+                        <td>Configurable via <code>ALLOWED_DAILY_INTAKE_PATTERNS</code> (current: up to two double timeslots + one single, or one double + two singles, or four singles)</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Blocked Instruction Weekdays</td>
@@ -143,7 +143,7 @@
                     </tr>
                     <tr>
                         <td class="rule-name">Blocked Dates</td>
-                        <td><span class="badge badge-red">❌ Blocked</span> No scheduling on holidays (Dec 23 – Jan 4)</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> Configurable via <code>BLOCKED_DATES</code></td>
                     </tr>
                     <tr>
                         <td class="rule-name">Experiment Window</td>
@@ -165,23 +165,27 @@
                 <tbody>
                     <tr>
                         <td class="rule-name">Available Slots</td>
-                        <td><code>11:00</code> <code>13:00</code> <code>17:00</code></td>
+                        <td>Configurable via <code>TIME_SLOTS</code> (current: <code>11:00</code> <code>13:00</code> <code>16:00</code>)</td>
                     </tr>
                     <tr>
-                        <td class="rule-name">48-Hour Rule</td>
-                        <td>Slot must be ≥48 hours in the future</td>
+                        <td class="rule-name">Advance Rule</td>
+                        <td>Configurable via <code>INTAKE_MIN_ADVANCE_HOURS</code> (current: slot must be ≥24 hours in the future)</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Gap Requirement</td>
-                        <td>2.5 hours (150 min) minimum between <em>different</em> timeslots on same day</td>
+                        <td>Configurable via <code>MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS</code> (current: 150 min) between <em>different</em> timeslots on same day</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Same-Slot Capacity</td>
-                        <td>≤2 concurrent intakes on the <em>exact same</em> timeslot</td>
+                        <td>Configurable via <code>MAX_INTAKES_PER_TIMESLOT</code> (current: ≤2 concurrent intakes on the <em>exact same</em> timeslot)</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Friday Block</td>
                         <td><span class="badge badge-red">❌ Blocked</span> No slots 10:00–14:29</td>
+                    </tr>
+                    <tr>
+                        <td class="rule-name">Friday Latest Intake</td>
+                        <td>Configurable via <code>FRIDAY_LAST_INTAKE_TIME</code> (current: latest allowed Friday intake start is <code>18:00</code>)</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Monday Block</td>
@@ -245,7 +249,7 @@
                 <tbody>
                     <tr>
                         <td class="rule-name">Reservation Period</td>
-                        <td>From <strong>first session date</strong> through <strong>next workday after last session</strong> (for cleaning/return)</td>
+                        <td>From <strong>first session date</strong> through <strong><code>EQUIPMENT_CLEANING_DELAY_DAYS</code> calendar day(s) after last session</strong> (current: 1 day, for cleaning/return)</td>
                     </tr>
                 </tbody>
             </table>

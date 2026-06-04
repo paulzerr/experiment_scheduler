@@ -93,17 +93,15 @@ class SessionManager {
         const instructionSessionsCount = this.countInstructionSessionsOnDate(date);
         
         // Check if there are any valid timeslots remaining for this date
-        // considering the 48-hour rule
+        // considering the configured lead-time rule
         const availableSlots = this.getAvailableTimeSlots(date);
         const hasValidSlots = availableSlots.length > 0;
         const isDateAvailable = this.isDateAvailable(date);
         const isBlocked = DateManager.isDateBlocked(date);
         const isInstructionWeekdayBlocked = DateManager.isInstructionWeekdayBlocked(date, this.config);
-        const passesInstructionCount = instructionSessionsCount < 3;
         const result = isDateAvailable &&
                        !isBlocked &&
                        !isInstructionWeekdayBlocked &&
-                       passesInstructionCount &&
                        hasValidSlots;
         excessiveLogSessionManager('SessionManager.isDateAvailableForInstruction evaluated', {
             instructionSessionsCount,
@@ -112,7 +110,6 @@ class SessionManager {
             isDateAvailable,
             isBlocked,
             isInstructionWeekdayBlocked,
-            passesInstructionCount,
             result
         });
         return result;
@@ -135,10 +132,11 @@ class SessionManager {
             excessiveLogSessionManager('SessionManager.countInstructionSessionsOnDate iterating key', {
                 dateString,
                 dateTimeSlot,
-                matchesDate
+                matchesDate,
+                slotCount: this.takenDateTimeSlots.get(dateTimeSlot) || 0
             });
             if (dateTimeSlot.startsWith(dateString)) {
-                count++;
+                count += this.takenDateTimeSlots.get(dateTimeSlot) || 0;
                 excessiveLogSessionManager('SessionManager.countInstructionSessionsOnDate incremented count', {
                     dateTimeSlot,
                     newCount: count
@@ -147,6 +145,84 @@ class SessionManager {
         }
         excessiveLogSessionManager('SessionManager.countInstructionSessionsOnDate returning', { dateString, count });
         return count;
+    }
+
+    getIntakeTimeslotCountsForDate(date, candidateTimeslot = null) {
+        excessiveLogSessionManager('SessionManager.getIntakeTimeslotCountsForDate called', {
+            date: serializeSessionManagerDate(date),
+            candidateTimeslot
+        });
+        const dateString = DateManager.toYYYYMMDD(date);
+        const counts = new Map();
+
+        for (const [dateTimeSlot, count] of this.takenDateTimeSlots) {
+            if (!dateTimeSlot.startsWith(dateString)) continue;
+            const time = dateTimeSlot.split('_')[1];
+            counts.set(time, count);
+        }
+
+        if (candidateTimeslot) {
+            counts.set(candidateTimeslot, (counts.get(candidateTimeslot) || 0) + 1);
+        }
+
+        excessiveLogSessionManager('SessionManager.getIntakeTimeslotCountsForDate returning', {
+            dateString,
+            counts: Array.from(counts.entries())
+        });
+        return counts;
+    }
+
+    isDailyIntakePatternAllowed(timeslotCounts) {
+        const occupancies = Array.from(timeslotCounts.values()).filter(count => count > 0);
+        const doubleTimeslots = occupancies.filter(count => count === 2).length;
+        const singleTimeslots = occupancies.filter(count => count === 1).length;
+        const hasInvalidTimeslotCount = occupancies.some(count => count > this.config.MAX_INTAKES_PER_TIMESLOT);
+        const allowedPatterns = this.config.ALLOWED_DAILY_INTAKE_PATTERNS || [];
+        const isAllowed = !hasInvalidTimeslotCount && allowedPatterns.some(pattern => {
+            return doubleTimeslots <= pattern.doubleTimeslots &&
+                   singleTimeslots <= pattern.singleTimeslots;
+        });
+
+        excessiveLogSessionManager('SessionManager.isDailyIntakePatternAllowed evaluated', {
+            timeslotCounts: Array.from(timeslotCounts.entries()),
+            occupancies,
+            doubleTimeslots,
+            singleTimeslots,
+            hasInvalidTimeslotCount,
+            allowedPatterns,
+            isAllowed
+        });
+        return isAllowed;
+    }
+
+    isFridayTimeslotAfterCutoff(slotDate, timeslot) {
+        excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff called', {
+            slotDate: serializeSessionManagerDate(slotDate),
+            timeslot,
+            fridayLastIntakeTime: this.config.FRIDAY_LAST_INTAKE_TIME
+        });
+        if (slotDate.getUTCDay() !== 5 || !this.config.FRIDAY_LAST_INTAKE_TIME) {
+            excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff returning false because cutoff does not apply');
+            return false;
+        }
+
+        const slotMinutes = this._timeStringToMinutes(timeslot);
+        const cutoffMinutes = this._timeStringToMinutes(this.config.FRIDAY_LAST_INTAKE_TIME);
+        if (slotMinutes === null || cutoffMinutes === null) {
+            excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff returning false because cutoff or timeslot is invalid', {
+                slotMinutes,
+                cutoffMinutes
+            });
+            return false;
+        }
+
+        const isAfterCutoff = slotMinutes > cutoffMinutes;
+        excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff evaluated', {
+            slotMinutes,
+            cutoffMinutes,
+            isAfterCutoff
+        });
+        return isAfterCutoff;
     }
 
     /**
@@ -277,9 +353,7 @@ class SessionManager {
     }
 
     /**
-     * Gets available time slots for a given date, enforcing a 2.5-hour gap.
-     * Allows up to 2 concurrent intakes on the SAME timeslot.
-     * Filters out slots less than 48 hours from now.
+     * Gets available time slots for a given date, enforcing configured intake rules.
      * @param {Date} date - The date for which to get available time slots.
      * @returns {string[]} An array of available time slot strings.
      */
@@ -323,14 +397,15 @@ class SessionManager {
             return minutesValue;
         };
 
-        const gap = 150; // 2.5 hours in minutes
+        const gap = this.config.MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS;
         const now = new Date();
-        const minTime = now.getTime() + (48 * 60 * 60 * 1000); // 48 hours from now
+        const minTime = now.getTime() + (this.config.INTAKE_MIN_ADVANCE_HOURS * 60 * 60 * 1000);
         excessiveLogSessionManager('SessionManager.getAvailableTimeSlots computed timing boundaries', {
             now: serializeSessionManagerDate(now),
             minTime,
             minTimeIso: new Date(minTime).toISOString(),
-            gap
+            gap,
+            intakeMinAdvanceHours: this.config.INTAKE_MIN_ADVANCE_HOURS
         });
 
         const availableSlots = this.config.TIME_SLOTS.filter(slot => {
@@ -344,9 +419,9 @@ class SessionManager {
                 slotDate: serializeSessionManagerDate(slotDate)
             });
 
-            // 0. Check 48-hour rule
+            // 0. Check configured lead-time rule
             if (slotDate.getTime() < minTime) {
-                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by 48-hour rule', {
+                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by configured lead-time rule', {
                     slot,
                     slotTime: slotDate.getTime(),
                     minTime
@@ -371,6 +446,15 @@ class SessionManager {
                     excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Friday block', { slot });
                     return false;
                 }
+            }
+
+            // 0.55 Check Friday latest intake cutoff
+            if (this.isFridayTimeslotAfterCutoff(slotDate, slot)) {
+                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Friday latest intake cutoff', {
+                    slot,
+                    fridayLastIntakeTime: this.config.FRIDAY_LAST_INTAKE_TIME
+                });
+                return false;
             }
 
             // 0.6 Check Monday block (before 13:00)
@@ -401,17 +485,30 @@ class SessionManager {
 
             const slotMinutes = timeToMinutes(slot);
             const slotCount = takenSlotsMap.get(slot) || 0;
+            const candidateTimeslotCounts = this.getIntakeTimeslotCountsForDate(date, slot);
+            const isDailyPatternAllowed = this.isDailyIntakePatternAllowed(candidateTimeslotCounts);
             excessiveLogSessionManager('SessionManager.getAvailableTimeSlots evaluated slot capacity', {
                 slot,
                 slotMinutes,
-                slotCount
+                slotCount,
+                candidateTimeslotCounts: Array.from(candidateTimeslotCounts.entries()),
+                isDailyPatternAllowed
             });
 
-            // 1. Check capacity (max 2 concurrent intakes)
-            if (slotCount >= 2) {
+            // 1. Check capacity
+            if (!isDailyPatternAllowed) {
+                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by daily intake pattern', {
+                    slot,
+                    candidateTimeslotCounts: Array.from(candidateTimeslotCounts.entries())
+                });
+                return false;
+            }
+
+            if (slotCount >= this.config.MAX_INTAKES_PER_TIMESLOT) {
                 excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by same-slot capacity', {
                     slot,
-                    slotCount
+                    slotCount,
+                    maxIntakesPerTimeslot: this.config.MAX_INTAKES_PER_TIMESLOT
                 });
                 return false;
             }
@@ -470,18 +567,19 @@ class SessionManager {
         const slotDate = new Date(date);
         slotDate.setUTCHours(hours, minutes, 0, 0);
         const now = new Date();
-        const minTime = now.getTime() + (48 * 60 * 60 * 1000); // 48 hours from now
+        const minTime = now.getTime() + (this.config.INTAKE_MIN_ADVANCE_HOURS * 60 * 60 * 1000);
         excessiveLogSessionManager('SessionManager.isTimeslotAvailable computed slot date and minimum time', {
             timeslot,
             slotDate: serializeSessionManagerDate(slotDate),
             now: serializeSessionManagerDate(now),
             minTime,
-            minTimeIso: new Date(minTime).toISOString()
+            minTimeIso: new Date(minTime).toISOString(),
+            intakeMinAdvanceHours: this.config.INTAKE_MIN_ADVANCE_HOURS
         });
         
-        // 0. Check 48-hour rule
+        // 0. Check configured lead-time rule
         if (slotDate.getTime() < minTime) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by 48-hour rule', {
+            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by configured lead-time rule', {
                 slotTime: slotDate.getTime(),
                 minTime
             });
@@ -504,6 +602,15 @@ class SessionManager {
                 excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Friday block', { timeslot });
                 return false;
             }
+        }
+
+        // 0.55 Check Friday latest intake cutoff
+        if (this.isFridayTimeslotAfterCutoff(slotDate, timeslot)) {
+            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Friday latest intake cutoff', {
+                timeslot,
+                fridayLastIntakeTime: this.config.FRIDAY_LAST_INTAKE_TIME
+            });
+            return false;
         }
 
         // 0.6 Check Monday block (before 13:00)
@@ -534,17 +641,30 @@ class SessionManager {
         const dateString = DateManager.toYYYYMMDD(date);
         const dateTimeKey = `${dateString}_${timeslot}`;
         const count = this.takenDateTimeSlots.get(dateTimeKey) || 0;
+        const candidateTimeslotCounts = this.getIntakeTimeslotCountsForDate(date, timeslot);
+        const isDailyPatternAllowed = this.isDailyIntakePatternAllowed(candidateTimeslotCounts);
         excessiveLogSessionManager('SessionManager.isTimeslotAvailable evaluated same-slot occupancy', {
             dateString,
             dateTimeKey,
-            count
+            count,
+            candidateTimeslotCounts: Array.from(candidateTimeslotCounts.entries()),
+            isDailyPatternAllowed
         });
 
         // 1. Check capacity
-        if (count >= 2) {
+        if (!isDailyPatternAllowed) {
+            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by daily intake pattern', {
+                dateString,
+                candidateTimeslotCounts: Array.from(candidateTimeslotCounts.entries())
+            });
+            return false;
+        }
+
+        if (count >= this.config.MAX_INTAKES_PER_TIMESLOT) {
             excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by same-slot capacity', {
                 dateTimeKey,
-                count
+                count,
+                maxIntakesPerTimeslot: this.config.MAX_INTAKES_PER_TIMESLOT
             });
             return false;
         }
@@ -563,7 +683,7 @@ class SessionManager {
         };
 
         const slotMinutes = timeToMinutes(timeslot);
-        const gap = 150; // 2.5 hours in minutes
+        const gap = this.config.MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS;
         excessiveLogSessionManager('SessionManager.isTimeslotAvailable evaluating cross-slot gap constraints', {
             timeslot,
             slotMinutes,
@@ -804,12 +924,11 @@ class SessionManager {
             lastDay: serializeSessionManagerDate(lastDay)
         });
 
-        // Calculate the cleaning day
-        const cleaningDay = new Date(lastDay);
-        cleaningDay.setUTCDate(cleaningDay.getUTCDate() + 1);
-        const finalCleaningDay = DateManager.getNextWorkDay(cleaningDay);
+        // Calculate the cleaning day using a calendar-day delay.
+        const finalCleaningDay = new Date(lastDay);
+        finalCleaningDay.setUTCDate(lastDay.getUTCDate() + this.config.EQUIPMENT_CLEANING_DELAY_DAYS);
         excessiveLogSessionManager('SessionManager.getEquipmentDays computed cleaning day boundaries', {
-            cleaningDay: serializeSessionManagerDate(cleaningDay),
+            equipmentCleaningDelayDays: this.config.EQUIPMENT_CLEANING_DELAY_DAYS,
             finalCleaningDay: serializeSessionManagerDate(finalCleaningDay)
         });
 
