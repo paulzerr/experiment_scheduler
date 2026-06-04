@@ -195,31 +195,49 @@ class SessionManager {
         return isAllowed;
     }
 
-    isFridayTimeslotAfterCutoff(slotDate, timeslot) {
-        excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff called', {
+    getMondayIntakeBookingCutoff(slotDate) {
+        excessiveLogSessionManager('SessionManager.getMondayIntakeBookingCutoff called', {
             slotDate: serializeSessionManagerDate(slotDate),
-            timeslot,
-            fridayLastIntakeTime: this.config.FRIDAY_LAST_INTAKE_TIME
+            mondayIntakeBookingCutoffTime: this.config.MONDAY_INTAKE_BOOKING_CUTOFF_TIME
         });
-        if (slotDate.getUTCDay() !== 5 || !this.config.FRIDAY_LAST_INTAKE_TIME) {
-            excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff returning false because cutoff does not apply');
-            return false;
+        if (slotDate.getUTCDay() !== 1 || !this.config.MONDAY_INTAKE_BOOKING_CUTOFF_TIME) {
+            excessiveLogSessionManager('SessionManager.getMondayIntakeBookingCutoff returning null because cutoff does not apply');
+            return null;
         }
 
-        const slotMinutes = this._timeStringToMinutes(timeslot);
-        const cutoffMinutes = this._timeStringToMinutes(this.config.FRIDAY_LAST_INTAKE_TIME);
-        if (slotMinutes === null || cutoffMinutes === null) {
-            excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff returning false because cutoff or timeslot is invalid', {
-                slotMinutes,
+        const cutoffMinutes = this._timeStringToMinutes(this.config.MONDAY_INTAKE_BOOKING_CUTOFF_TIME);
+        if (cutoffMinutes === null) {
+            excessiveLogSessionManager('SessionManager.getMondayIntakeBookingCutoff returning null because cutoff time is invalid', {
                 cutoffMinutes
             });
+            return null;
+        }
+
+        const cutoff = new Date(slotDate);
+        cutoff.setUTCHours(0, 0, 0, 0);
+        cutoff.setUTCDate(cutoff.getUTCDate() - 3);
+        cutoff.setUTCHours(Math.floor(cutoffMinutes / 60), cutoffMinutes % 60, 0, 0);
+        excessiveLogSessionManager('SessionManager.getMondayIntakeBookingCutoff returning cutoff', {
+            cutoffMinutes,
+            cutoff: serializeSessionManagerDate(cutoff)
+        });
+        return cutoff;
+    }
+
+    isMondayIntakeAfterBookingCutoff(slotDate, now = new Date()) {
+        excessiveLogSessionManager('SessionManager.isMondayIntakeAfterBookingCutoff called', {
+            slotDate: serializeSessionManagerDate(slotDate),
+            now: serializeSessionManagerDate(now)
+        });
+        const cutoff = this.getMondayIntakeBookingCutoff(slotDate);
+        if (!cutoff) {
+            excessiveLogSessionManager('SessionManager.isMondayIntakeAfterBookingCutoff returning false because no cutoff applies');
             return false;
         }
 
-        const isAfterCutoff = slotMinutes > cutoffMinutes;
-        excessiveLogSessionManager('SessionManager.isFridayTimeslotAfterCutoff evaluated', {
-            slotMinutes,
-            cutoffMinutes,
+        const isAfterCutoff = now.getTime() > cutoff.getTime();
+        excessiveLogSessionManager('SessionManager.isMondayIntakeAfterBookingCutoff evaluated', {
+            cutoff: serializeSessionManagerDate(cutoff),
             isAfterCutoff
         });
         return isAfterCutoff;
@@ -448,11 +466,11 @@ class SessionManager {
                 }
             }
 
-            // 0.55 Check Friday latest intake cutoff
-            if (this.isFridayTimeslotAfterCutoff(slotDate, slot)) {
-                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Friday latest intake cutoff', {
+            // 0.55 Check Monday intake booking cutoff
+            if (this.isMondayIntakeAfterBookingCutoff(slotDate, now)) {
+                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Monday intake booking cutoff', {
                     slot,
-                    fridayLastIntakeTime: this.config.FRIDAY_LAST_INTAKE_TIME
+                    mondayIntakeBookingCutoffTime: this.config.MONDAY_INTAKE_BOOKING_CUTOFF_TIME
                 });
                 return false;
             }
@@ -604,11 +622,11 @@ class SessionManager {
             }
         }
 
-        // 0.55 Check Friday latest intake cutoff
-        if (this.isFridayTimeslotAfterCutoff(slotDate, timeslot)) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Friday latest intake cutoff', {
+        // 0.55 Check Monday intake booking cutoff
+        if (this.isMondayIntakeAfterBookingCutoff(slotDate, now)) {
+            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Monday intake booking cutoff', {
                 timeslot,
-                fridayLastIntakeTime: this.config.FRIDAY_LAST_INTAKE_TIME
+                mondayIntakeBookingCutoffTime: this.config.MONDAY_INTAKE_BOOKING_CUTOFF_TIME
             });
             return false;
         }

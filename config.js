@@ -38,10 +38,10 @@ const SCHEDULER_CONFIG = {
     MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS: 119,
 
     // Minimum lead time before an intake timeslot can be booked
-    INTAKE_MIN_ADVANCE_HOURS: 24,
+    INTAKE_MIN_ADVANCE_HOURS: 48,
 
-    // Latest allowed intake timeslot start on Fridays
-    FRIDAY_LAST_INTAKE_TIME: '18:00',
+    // Latest time to book a Monday intake, on the preceding Friday
+    MONDAY_INTAKE_BOOKING_CUTOFF_TIME: '18:00',
 
     // Extra calendar days to reserve equipment after the last data collection day
     EQUIPMENT_CLEANING_DELAY_DAYS: 1,
@@ -136,7 +136,7 @@ excessiveLogConfig('config.js loaded: Scheduler configuration object created', {
     allowedDailyIntakePatterns: SCHEDULER_CONFIG.ALLOWED_DAILY_INTAKE_PATTERNS,
     minutesBetweenDifferentIntakeTimeslots: SCHEDULER_CONFIG.MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS,
     intakeMinAdvanceHours: SCHEDULER_CONFIG.INTAKE_MIN_ADVANCE_HOURS,
-    fridayLastIntakeTime: SCHEDULER_CONFIG.FRIDAY_LAST_INTAKE_TIME,
+    mondayIntakeBookingCutoffTime: SCHEDULER_CONFIG.MONDAY_INTAKE_BOOKING_CUTOFF_TIME,
     equipmentCleaningDelayDays: SCHEDULER_CONFIG.EQUIPMENT_CLEANING_DELAY_DAYS,
     session1WindowDays: SCHEDULER_CONFIG.SESSION1_WINDOW_DAYS,
     experimentWindowDays: SCHEDULER_CONFIG.EXPERIMENT_WINDOW_DAYS,

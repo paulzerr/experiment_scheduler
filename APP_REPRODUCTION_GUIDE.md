@@ -182,9 +182,9 @@ Important behavior:
 - `MAX_CONCURRENT_SESSIONS = 16`
 - `MAX_INTAKES_PER_TIMESLOT = 2`
 - `ALLOWED_DAILY_INTAKE_PATTERNS = [{ doubleTimeslots:2, singleTimeslots:1 }, { doubleTimeslots:1, singleTimeslots:2 }, { doubleTimeslots:0, singleTimeslots:4 }]`
-- `MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS = 150`
+- `MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS = 119`
 - `INTAKE_MIN_ADVANCE_HOURS = 24`
-- `FRIDAY_LAST_INTAKE_TIME = '18:00'`
+- `MONDAY_INTAKE_BOOKING_CUTOFF_TIME = '18:00'`
 - `EQUIPMENT_CLEANING_DELAY_DAYS = 1`
 - `SESSION1_WINDOW_DAYS = 5`
 - `EXPERIMENT_WINDOW_DAYS = 25`
@@ -287,8 +287,8 @@ Rules enforced:
    - slot datetime must be >= now + `INTAKE_MIN_ADVANCE_HOURS`.
 2. Friday block:
    - no slot from 10:00 to 14:29 (UTC-based day check).
-3. Friday latest intake cutoff:
-   - no Friday slot with a start time later than `FRIDAY_LAST_INTAKE_TIME`.
+3. Monday intake booking cutoff:
+   - Monday intakes must be booked by the preceding Friday at `MONDAY_INTAKE_BOOKING_CUTOFF_TIME`.
 4. Monday block:
    - no slot before 13:00.
 5. Config blocked date-time ranges:
@@ -302,8 +302,8 @@ Rules enforced:
    - if another occupied slot exists on that date and absolute difference < `MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS`, disallow.
 
 Practical consequence with slots `11:00`, `13:00`, `16:00`:
-- `11:00` and `13:00` conflict (120 min apart).
-- `13:00` and `16:00` are allowed because 180 >= 150.
+- `11:00` and `13:00` are allowed because 120 >= 119.
+- `13:00` and `16:00` are allowed because 180 >= 119.
 - `11:00` and `16:00` allowed.
 
 ### Selection APIs
@@ -613,7 +613,7 @@ Availability/rules:
 - `BLOCKED_DATES` blocked for instruction start dates.
 - Timeslot blocked within `INTAKE_MIN_ADVANCE_HOURS`.
 - Friday 10:00-14:29 times blocked.
-- Friday times later than `FRIDAY_LAST_INTAKE_TIME` are blocked.
+- Monday intakes are blocked after the preceding Friday at `MONDAY_INTAKE_BOOKING_CUTOFF_TIME`.
 - Monday <13:00 blocked.
 - `INSTRUCTION_BLOCKED_DATE_TIME_RANGES` blocks matching instruction timeslots.
 - Same exact date+timeslot allows up to `MAX_INTAKES_PER_TIMESLOT` then blocks.
