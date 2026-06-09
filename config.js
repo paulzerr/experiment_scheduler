@@ -87,7 +87,8 @@ const SCHEDULER_CONFIG = {
         '2026-05-05', // Liberation day building closed
         '2026-05-14', // Hemelvaart building closed
         '2026-05-15', // Hemelvaart building closed
-        '2026-05-25', // Pinksteren   
+        '2026-05-25', // Pinksteren
+        '2026-06-11', // Social day
         '2026-07-01',
         '2026-07-02',
         '2026-07-03',
