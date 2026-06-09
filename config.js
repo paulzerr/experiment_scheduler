@@ -44,7 +44,7 @@ const SCHEDULER_CONFIG = {
     MONDAY_INTAKE_BOOKING_CUTOFF_TIME: '18:00',
 
     // Extra calendar days to reserve equipment after the last data collection day
-    EQUIPMENT_CLEANING_DELAY_DAYS: 1,
+    EQUIPMENT_CLEANING_DELAY_DAYS: 0,
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 5,
