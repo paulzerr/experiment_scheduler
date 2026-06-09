@@ -38,7 +38,7 @@ const SCHEDULER_CONFIG = {
     MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS: 119,
 
     // Minimum lead time before an intake timeslot can be booked
-    INTAKE_MIN_ADVANCE_HOURS: 24,
+    INTAKE_MIN_ADVANCE_HOURS: 16,
 
     // Latest time to book a Monday intake, on the preceding Friday
     MONDAY_INTAKE_BOOKING_CUTOFF_TIME: '18:00',
