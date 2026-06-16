@@ -21,7 +21,7 @@ const SCHEDULER_CONFIG = {
     TOTAL_SESSIONS: 18,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 14,
+    MAX_CONCURRENT_SESSIONS: 13,
 
     // Maximum number of concurrent intakes on the exact same timeslot
     MAX_INTAKES_PER_TIMESLOT: 2,
