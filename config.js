@@ -18,13 +18,13 @@ const SUPABASE_CONFIG = {
 // Scheduler Configuration
 const SCHEDULER_CONFIG = {
     // Total number of experiment sessions to schedule
-    TOTAL_SESSIONS: 18,
+    TOTAL_SESSIONS: 12,
     
     // Maximum number of concurrent sessions (based on available devices)
-    MAX_CONCURRENT_SESSIONS: 13,
+    MAX_CONCURRENT_SESSIONS: 20,
 
     // Maximum number of concurrent intakes on the exact same timeslot
-    MAX_INTAKES_PER_TIMESLOT: 2,
+    MAX_INTAKES_PER_TIMESLOT: 8,
 
     // Allowed daily intake distributions across timeslots.
     // Examples: 2 double + 1 single, 1 double + 2 single, or 4 single.
@@ -48,10 +48,10 @@ const SCHEDULER_CONFIG = {
     
     // Time windows for scheduling (in days)
     SESSION1_WINDOW_DAYS: 5,
-    EXPERIMENT_WINDOW_DAYS: 25, 
+    EXPERIMENT_WINDOW_DAYS: 18, 
     
     // Minimum consecutive available days required for experiment sessions
-    MIN_AVAILABLE_DAYS: 25, 
+    MIN_AVAILABLE_DAYS: 18, 
     
     // Time slot options for instruction sessions
     TIME_SLOTS: [
