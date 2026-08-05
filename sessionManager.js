@@ -447,24 +447,6 @@ class SessionManager {
                 return false;
             }
 
-            // 0.5 Check Friday block (10:00 - 14:29)
-            // 5 is Friday in getUTCDay() (0=Sun, 1=Mon, ..., 5=Fri, 6=Sat)
-            if (slotDate.getUTCDay() === 5) {
-                const slotTimeInMinutes = hours * 60 + minutes;
-                const blockStart = 10 * 60;      // 10:00
-                const blockEnd = 14 * 60 + 29;   // 14:29
-                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots evaluating Friday block', {
-                    slot,
-                    slotTimeInMinutes,
-                    blockStart,
-                    blockEnd
-                });
-                
-                if (slotTimeInMinutes >= blockStart && slotTimeInMinutes <= blockEnd) {
-                    excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Friday block', { slot });
-                    return false;
-                }
-            }
 
             // 0.55 Check Monday intake booking cutoff
             if (this.isMondayIntakeAfterBookingCutoff(slotDate, now)) {
