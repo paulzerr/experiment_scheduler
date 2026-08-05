@@ -274,105 +274,49 @@ async function populateSession1Calendar() {
     excessiveLogScript('populateSession1Calendar started', {
         participantInfo
     });
+
     elements.session1Calendar.innerHTML = '';
     excessiveLogScript('populateSession1Calendar cleared session1Calendar container');
-    
-    const participantScheduleFromDate = participantInfo.schedule_from
+
+    const scheduleFromDate = participantInfo.schedule_from
         ? DateManager.toUTCDate(participantInfo.schedule_from)
         : null;
-    const nextWorkDayFromNow = DateManager.toUTCDate(DateManager.getNextWorkDay(new Date()));
-    const searchStartDate = participantScheduleFromDate && participantScheduleFromDate.getTime() > nextWorkDayFromNow.getTime()
-        ? participantScheduleFromDate
-        : nextWorkDayFromNow;
-    excessiveLogScript('populateSession1Calendar resolved effective searchStartDate', {
-        participantScheduleFromDate: serializeScriptDate(participantScheduleFromDate),
-        nextWorkDayFromNow: serializeScriptDate(nextWorkDayFromNow),
-        searchStartDate: serializeScriptDate(searchStartDate),
-        usedParticipantScheduleFrom: Boolean(
-            participantScheduleFromDate &&
-            nextWorkDayFromNow &&
-            participantScheduleFromDate.getTime() > nextWorkDayFromNow.getTime()
-        )
+
+    excessiveLogScript('populateSession1Calendar normalized schedule_from', {
+        scheduleFromDate: serializeScriptDate(scheduleFromDate)
     });
 
-    if (!searchStartDate) {
-        excessiveLogScript('populateSession1Calendar throwing because searchStartDate is invalid');
-        throw new Error("Could not determine a valid start date for the search.");
+    if (!scheduleFromDate) {
+        throw new Error("No scheduling date has been assigned. Please contact the administrator.");
     }
 
-    // We need the dateCountMap to find a valid start date
-    excessiveLogScript('populateSession1Calendar fetching latest availability before start-date search');
+    // Refresh availability
     const dateCountMap = await fetchAndUpdateAvailability();
-    excessiveLogScript('populateSession1Calendar received dateCountMap', {
-        size: dateCountMap.size
+
+    excessiveLogScript('populateSession1Calendar fetched availability');
+
+    // Check if schedule_from date is available
+    const isAvailable = sessionManager.isDateAvailable(scheduleFromDate);
+
+    excessiveLogScript('populateSession1Calendar checked schedule_from availability', {
+        scheduleFromDate: serializeScriptDate(scheduleFromDate),
+        isAvailable
     });
 
-    const experimentStartDate = DateManager.findExperimentStartDate(
-        searchStartDate,
-        dateCountMap,
-        SCHEDULER_CONFIG
-    );
-    excessiveLogScript('populateSession1Calendar computed experimentStartDate', {
-        experimentStartDate: serializeScriptDate(experimentStartDate)
-    });
-
-    if (experimentStartDate) {
-        const availableDates = [];
-        let currentDate = new Date(experimentStartDate);
-        excessiveLogScript('populateSession1Calendar beginning instruction date collection loop', {
-            loopStartDate: serializeScriptDate(currentDate),
-            session1WindowDays: SCHEDULER_CONFIG.SESSION1_WINDOW_DAYS
-        });
-        
-        // Find the next valid instruction dates that each also satisfy a full capacity window.
-        while (availableDates.length < SCHEDULER_CONFIG.SESSION1_WINDOW_DAYS && availableDates.length < 14) {
-            const cursorSnapshot = new Date(currentDate);
-            const canUseDateForInstruction = sessionManager.isDateAvailableForInstruction(currentDate);
-            const hasConsecutiveWindow = DateManager.hasConsecutiveCapacityWindow(
-                currentDate,
-                dateCountMap,
-                SCHEDULER_CONFIG
-            );
-            const canUseDate = canUseDateForInstruction && hasConsecutiveWindow;
-            excessiveLogScript('populateSession1Calendar evaluated candidate date', {
-                candidate: serializeScriptDate(cursorSnapshot),
-                canUseDateForInstruction,
-                hasConsecutiveWindow,
-                canUseDate,
-                collectedCount: availableDates.length
-            });
-            if (canUseDate) {
-                availableDates.push(new Date(currentDate));
-                excessiveLogScript('populateSession1Calendar added date to availableDates', {
-                    addedDate: serializeScriptDate(currentDate),
-                    newCount: availableDates.length
-                });
-            }
-            currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-            excessiveLogScript('populateSession1Calendar advanced candidate cursor', {
-                nextCandidate: serializeScriptDate(currentDate)
-            });
-        }
-        
-        excessiveLogScript('populateSession1Calendar finished collecting dates', {
-            count: availableDates.length,
-            availableDates: serializeScriptDateArray(availableDates)
-        });
-        availableDates.forEach((date, index) => {
-            excessiveLogScript('populateSession1Calendar rendering date button', {
-                index,
-                date: serializeScriptDate(date)
-            });
-            createDateButton(date, elements.session1Calendar, 'session1');
-        });
-        excessiveLogScript('populateSession1Calendar rendered all session1 buttons', {
-            renderedCount: availableDates.length
-        });
-
-    } else {
-        excessiveLogScript('populateSession1Calendar throwing because no valid experimentStartDate found');
-        throw new Error('No suitable block of dates could be found for the experiment. Please contact the administrator.');
+    if (!isAvailable) {
+        throw new Error(
+            "The assigned scheduling date is no longer available. Please contact the administrator."
+        );
     }
+
+    // Only render the schedule_from date
+    createDateButton(
+        scheduleFromDate,
+        elements.session1Calendar,
+        'session1'
+    );
+
+    excessiveLogScript('populateSession1Calendar rendered only schedule_from date');
 }
 
 function populateTimeslotButtons() {
@@ -492,7 +436,17 @@ function createDateButton(date, container, type) {
         innerHTML: button.innerHTML
     });
 
-    const isAvailable = sessionManager.isDateAvailable(date);
+    let isAvailable = sessionManager.isDateAvailable(date);
+
+    if (type === 'session1') {
+        const isScheduleFromDate =
+            participantInfo &&
+            participantInfo.schedule_from &&
+            DateManager.toYYYYMMDD(DateManager.toUTCDate(participantInfo.schedule_from)) ===
+            DateManager.toYYYYMMDD(date);
+    
+        isAvailable = isScheduleFromDate && isAvailable;
+    }
     const isSelected = sessionManager.isDateSelectedInSessions(date);
     excessiveLogScript('createDateButton evaluated availability/selection', {
         date: serializeScriptDate(date),
