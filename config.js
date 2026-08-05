@@ -24,7 +24,7 @@ const SCHEDULER_CONFIG = {
     MAX_CONCURRENT_SESSIONS: 20,
 
     // Maximum number of concurrent intakes on the exact same timeslot
-    MAX_INTAKES_PER_TIMESLOT: 8,
+    MAX_INTAKES_PER_TIMESLOT: 7,
 
     // Allowed daily intake distributions across timeslots.
     // Examples: 2 double + 1 single, 1 double + 2 single, or 4 single.
