@@ -11,8 +11,8 @@ function excessiveLogConfig(message, payload) {
 
 // Supabase Configuration
 const SUPABASE_CONFIG = {
-    URL: 'https://xiupbovpolvimeayboig.supabase.co',
-    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpdXBib3Zwb2x2aW1lYXlib2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1MTQ5ODMsImV4cCI6MjA1NzA5MDk4M30.r-b6VnDBSB6D_LYj0CF1fdiQ66eJVGzakGguSV7619U'
+    URL: 'https://julcmnhkslouhrpsrrrv.supabase.co',
+    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1bGNtbmhrc2xvdWhycHNycnJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NDUxNzMsImV4cCI6MjA5NDQyMTE3M30.RACw3yBY13g9sXurxQTF2eX6T2bYSyI9NVX3f-ZeG1k'
 };
 
 // Scheduler Configuration
