@@ -180,16 +180,12 @@
                         <td>Configurable via <code>MAX_INTAKES_PER_TIMESLOT</code> (current: ≤2 concurrent intakes on the <em>exact same</em> timeslot)</td>
                     </tr>
                     <tr>
-                        <td class="rule-name">Friday Block</td>
-                        <td><span class="badge badge-red">❌ Blocked</span> No slots 10:00–14:29</td>
-                    </tr>
-                    <tr>
                         <td class="rule-name">Monday Booking Cutoff</td>
                         <td>Configurable via <code>MONDAY_INTAKE_BOOKING_CUTOFF_TIME</code> (current: Monday intakes must be booked by the preceding Friday at <code>18:00</code>)</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Monday Block</td>
-                        <td><span class="badge badge-red">❌ Blocked</span> No slots before 13:00</td>
+                        <td><span class="badge badge-red">❌ Blocked</span> Configurable via <code>MONDAY_INTAKE_EARLIEST_TIME</code> (current: no slots before <code>13:00</code>)</td>
                     </tr>
                     <tr>
                         <td class="rule-name">Config Date-Time Blocks</td>
