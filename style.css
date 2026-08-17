@@ -49,6 +49,7 @@ h2 {
     font-weight: bold;
 }
 .error-box {
+    white-space: pre-wrap;
     background-color: #f8d7da;
     border-color: #f5c6cb;
     color: #721c24;

@@ -43,6 +43,9 @@ const SCHEDULER_CONFIG = {
     // Latest time to book a Monday intake, on the preceding Friday
     MONDAY_INTAKE_BOOKING_CUTOFF_TIME: '18:00',
 
+    // Earliest allowed Monday intake start time (slots before this are blocked)
+    MONDAY_INTAKE_EARLIEST_TIME: '13:00',
+
     // Extra calendar days to reserve equipment after the last data collection day
     EQUIPMENT_CLEANING_DELAY_DAYS: 0,
     
@@ -89,6 +92,7 @@ excessiveLogConfig('config.js loaded: Scheduler configuration object created', {
     minutesBetweenDifferentIntakeTimeslots: SCHEDULER_CONFIG.MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS,
     intakeMinAdvanceHours: SCHEDULER_CONFIG.INTAKE_MIN_ADVANCE_HOURS,
     mondayIntakeBookingCutoffTime: SCHEDULER_CONFIG.MONDAY_INTAKE_BOOKING_CUTOFF_TIME,
+    mondayIntakeEarliestTime: SCHEDULER_CONFIG.MONDAY_INTAKE_EARLIEST_TIME,
     equipmentCleaningDelayDays: SCHEDULER_CONFIG.EQUIPMENT_CLEANING_DELAY_DAYS,
     session1WindowDays: SCHEDULER_CONFIG.SESSION1_WINDOW_DAYS,
     experimentWindowDays: SCHEDULER_CONFIG.EXPERIMENT_WINDOW_DAYS,

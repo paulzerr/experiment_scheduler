@@ -243,6 +243,26 @@ class SessionManager {
         return isAfterCutoff;
     }
 
+    getMondayIntakeEarliestTimeMinutes() {
+        if (!this.config.MONDAY_INTAKE_EARLIEST_TIME) {
+            return null;
+        }
+        return this._timeStringToMinutes(this.config.MONDAY_INTAKE_EARLIEST_TIME);
+    }
+
+    isBeforeMondayEarliestIntakeTime(slotDate, slotTimeInMinutes) {
+        if (slotDate.getUTCDay() !== 1) {
+            return false;
+        }
+
+        const earliestMinutes = this.getMondayIntakeEarliestTimeMinutes();
+        if (earliestMinutes === null) {
+            return false;
+        }
+
+        return slotTimeInMinutes < earliestMinutes;
+    }
+
     /**
      * Converts HH:mm to minutes from midnight.
      * @param {string} timeString - Time string (HH:mm).
@@ -457,21 +477,15 @@ class SessionManager {
                 return false;
             }
 
-            // 0.6 Check Monday block (before 13:00)
-            // 1 is Monday in getUTCDay()
-            if (slotDate.getUTCDay() === 1) {
-                const slotTimeInMinutes = hours * 60 + minutes;
-                const blockEnd = 13 * 60; // 13:00
-                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots evaluating Monday block', {
+            // 0.6 Check Monday earliest-intake rule
+            const slotTimeInMinutes = hours * 60 + minutes;
+            if (this.isBeforeMondayEarliestIntakeTime(slotDate, slotTimeInMinutes)) {
+                excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Monday earliest-intake rule', {
                     slot,
                     slotTimeInMinutes,
-                    blockEnd
+                    mondayIntakeEarliestTime: this.config.MONDAY_INTAKE_EARLIEST_TIME
                 });
-                
-                if (slotTimeInMinutes < blockEnd) {
-                    excessiveLogSessionManager('SessionManager.getAvailableTimeSlots rejected by Monday block', { slot });
-                    return false;
-                }
+                return false;
             }
 
             // 0.7 Check config-driven blocked date-time ranges
@@ -548,177 +562,96 @@ class SessionManager {
     }
 
     /**
+     * Returns a human-readable reason why a date cannot be booked, or null if available.
+     * @param {Date} date - The date to check.
+     * @returns {string|null}
+     */
+    getDateUnavailableReason(date) {
+        if (this.isDateAvailable(date)) {
+            return null;
+        }
+
+        const formattedDate = DateManager.formatForDisplay(date);
+        const count = this.dateCountMap.get(DateManager.toYYYYMMDD(date)) || 0;
+        return `${formattedDate} is fully booked (${count} of ${this.config.MAX_CONCURRENT_SESSIONS} sessions already scheduled on that date). Please choose a different date.`;
+    }
+
+    /**
+     * Returns a human-readable reason why a timeslot cannot be booked, or null if available.
+     * @param {string} timeslot - The timeslot (e.g., '14:00').
+     * @param {Date} date - The date to check against.
+     * @returns {string|null}
+     */
+    getTimeslotUnavailableReason(timeslot, date) {
+        if (!date) {
+            return null;
+        }
+
+        const [hours, minutes] = timeslot.split(':').map(Number);
+        const slotDate = new Date(date);
+        slotDate.setUTCHours(hours, minutes, 0, 0);
+        const now = new Date();
+        const minTime = now.getTime() + (this.config.INTAKE_MIN_ADVANCE_HOURS * 60 * 60 * 1000);
+        const formattedDate = DateManager.formatForDisplay(date);
+
+        if (slotDate.getTime() < minTime) {
+            return `The ${timeslot} instruction session on ${formattedDate} is too soon — it must be at least ${this.config.INTAKE_MIN_ADVANCE_HOURS} hours from now. Please pick a later timeslot or date.`;
+        }
+
+        if (this.isMondayIntakeAfterBookingCutoff(slotDate, now)) {
+            return `The ${timeslot} instruction session on ${formattedDate} (Monday) can no longer be booked — the deadline was the preceding Friday at ${this.config.MONDAY_INTAKE_BOOKING_CUTOFF_TIME}. Please pick a different date or timeslot.`;
+        }
+
+        const slotTimeInMinutes = hours * 60 + minutes;
+        if (this.isBeforeMondayEarliestIntakeTime(slotDate, slotTimeInMinutes)) {
+            return `The ${timeslot} timeslot on ${formattedDate} (Monday) is not available — Monday instruction sessions cannot start before ${this.config.MONDAY_INTAKE_EARLIEST_TIME}. Please pick a later timeslot.`;
+        }
+
+        if (this.isInstructionTimeslotBlockedByConfig(slotDate, timeslot)) {
+            return `The ${timeslot} timeslot on ${formattedDate} is blocked and cannot be booked. Please pick a different timeslot.`;
+        }
+
+        const dateString = DateManager.toYYYYMMDD(date);
+        const count = this.takenDateTimeSlots.get(`${dateString}_${timeslot}`) || 0;
+        const candidateTimeslotCounts = this.getIntakeTimeslotCountsForDate(date, timeslot);
+
+        if (!this.isDailyIntakePatternAllowed(candidateTimeslotCounts)) {
+            return `The ${timeslot} timeslot on ${formattedDate} cannot be booked — adding it would exceed the allowed daily intake pattern. Please pick a different timeslot.`;
+        }
+
+        if (count >= this.config.MAX_INTAKES_PER_TIMESLOT) {
+            return `The ${timeslot} timeslot on ${formattedDate} is full (${this.config.MAX_INTAKES_PER_TIMESLOT} participants already booked). Please pick a different timeslot.`;
+        }
+
+        const timeToMinutes = (time) => {
+            const [h, m] = time.split(':').map(Number);
+            return (h * 60) + m;
+        };
+        const slotMinutes = timeToMinutes(timeslot);
+        const gap = this.config.MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS;
+
+        for (const [key] of this.takenDateTimeSlots) {
+            if (!key.startsWith(dateString)) continue;
+
+            const takenTime = key.split('_')[1];
+            if (takenTime === timeslot) continue;
+
+            if (Math.abs(slotMinutes - timeToMinutes(takenTime)) < gap) {
+                return `The ${timeslot} timeslot on ${formattedDate} is too close to another booked session at ${takenTime} (minimum gap: ${gap} minutes). Please pick a different timeslot.`;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Checks if a timeslot is available on a specific date.
      * @param {string} timeslot - The timeslot (e.g., '14:00').
      * @param {Date} date - The date to check against.
      * @returns {boolean} True if the timeslot is available.
      */
     isTimeslotAvailable(timeslot, date) {
-        excessiveLogSessionManager('SessionManager.isTimeslotAvailable called', {
-            timeslot,
-            date: serializeSessionManagerDate(date)
-        });
-        if (!date) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable returning true because date is missing');
-            return true; // If no date, assume available
-        }
-        
-        const [hours, minutes] = timeslot.split(':').map(Number);
-        const slotDate = new Date(date);
-        slotDate.setUTCHours(hours, minutes, 0, 0);
-        const now = new Date();
-        const minTime = now.getTime() + (this.config.INTAKE_MIN_ADVANCE_HOURS * 60 * 60 * 1000);
-        excessiveLogSessionManager('SessionManager.isTimeslotAvailable computed slot date and minimum time', {
-            timeslot,
-            slotDate: serializeSessionManagerDate(slotDate),
-            now: serializeSessionManagerDate(now),
-            minTime,
-            minTimeIso: new Date(minTime).toISOString(),
-            intakeMinAdvanceHours: this.config.INTAKE_MIN_ADVANCE_HOURS
-        });
-        
-        // 0. Check configured lead-time rule
-        if (slotDate.getTime() < minTime) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by configured lead-time rule', {
-                slotTime: slotDate.getTime(),
-                minTime
-            });
-            return false;
-        }
-
-        // 0.5 Check Friday block (10:00 - 14:29)
-        if (slotDate.getUTCDay() === 5) {
-            const slotTimeInMinutes = hours * 60 + minutes;
-            const blockStart = 10 * 60;      // 10:00
-            const blockEnd = 14 * 60 + 29;   // 14:29
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable evaluating Friday block', {
-                timeslot,
-                slotTimeInMinutes,
-                blockStart,
-                blockEnd
-            });
-            
-            if (slotTimeInMinutes >= blockStart && slotTimeInMinutes <= blockEnd) {
-                excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Friday block', { timeslot });
-                return false;
-            }
-        }
-
-        // 0.55 Check Monday intake booking cutoff
-        if (this.isMondayIntakeAfterBookingCutoff(slotDate, now)) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Monday intake booking cutoff', {
-                timeslot,
-                mondayIntakeBookingCutoffTime: this.config.MONDAY_INTAKE_BOOKING_CUTOFF_TIME
-            });
-            return false;
-        }
-
-        // 0.6 Check Monday block (before 13:00)
-        if (slotDate.getUTCDay() === 1) {
-            const slotTimeInMinutes = hours * 60 + minutes;
-            const blockEnd = 13 * 60; // 13:00
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable evaluating Monday block', {
-                timeslot,
-                slotTimeInMinutes,
-                blockEnd
-            });
-            
-            if (slotTimeInMinutes < blockEnd) {
-                excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by Monday block', { timeslot });
-                return false;
-            }
-        }
-
-        // 0.7 Check config-driven blocked date-time ranges
-        if (this.isInstructionTimeslotBlockedByConfig(slotDate, timeslot)) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by config blocked date-time range', {
-                timeslot,
-                slotDate: serializeSessionManagerDate(slotDate)
-            });
-            return false;
-        }
-
-        const dateString = DateManager.toYYYYMMDD(date);
-        const dateTimeKey = `${dateString}_${timeslot}`;
-        const count = this.takenDateTimeSlots.get(dateTimeKey) || 0;
-        const candidateTimeslotCounts = this.getIntakeTimeslotCountsForDate(date, timeslot);
-        const isDailyPatternAllowed = this.isDailyIntakePatternAllowed(candidateTimeslotCounts);
-        excessiveLogSessionManager('SessionManager.isTimeslotAvailable evaluated same-slot occupancy', {
-            dateString,
-            dateTimeKey,
-            count,
-            candidateTimeslotCounts: Array.from(candidateTimeslotCounts.entries()),
-            isDailyPatternAllowed
-        });
-
-        // 1. Check capacity
-        if (!isDailyPatternAllowed) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by daily intake pattern', {
-                dateString,
-                candidateTimeslotCounts: Array.from(candidateTimeslotCounts.entries())
-            });
-            return false;
-        }
-
-        if (count >= this.config.MAX_INTAKES_PER_TIMESLOT) {
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by same-slot capacity', {
-                dateTimeKey,
-                count,
-                maxIntakesPerTimeslot: this.config.MAX_INTAKES_PER_TIMESLOT
-            });
-            return false;
-        }
-
-        // 2. Check conflicts with OTHER slots
-        const timeToMinutes = (time) => {
-            const [hours, minutes] = time.split(':').map(Number);
-            const minutesValue = hours * 60 + minutes;
-            excessiveLogSessionManager('SessionManager.isTimeslotAvailable converted time to minutes', {
-                time,
-                hours,
-                minutes,
-                minutesValue
-            });
-            return minutesValue;
-        };
-
-        const slotMinutes = timeToMinutes(timeslot);
-        const gap = this.config.MINUTES_BETWEEN_DIFFERENT_INTAKE_TIMESLOTS;
-        excessiveLogSessionManager('SessionManager.isTimeslotAvailable evaluating cross-slot gap constraints', {
-            timeslot,
-            slotMinutes,
-            gap
-        });
-
-        for (const [key, _] of this.takenDateTimeSlots) {
-            if (key.startsWith(dateString)) {
-                const takenTime = key.split('_')[1];
-                if (takenTime === timeslot) continue; // Ignore self
-
-                const takenMinutes = timeToMinutes(takenTime);
-                const diff = Math.abs(slotMinutes - takenMinutes);
-                excessiveLogSessionManager('SessionManager.isTimeslotAvailable compared against taken slot', {
-                    key,
-                    takenTime,
-                    takenMinutes,
-                    diff,
-                    gap
-                });
-                if (diff < gap) {
-                    excessiveLogSessionManager('SessionManager.isTimeslotAvailable rejected by cross-slot gap rule', {
-                        timeslot,
-                        takenTime
-                    });
-                    return false; // Overlaps with a different active slot
-                }
-            }
-        }
-
-        excessiveLogSessionManager('SessionManager.isTimeslotAvailable returning true', {
-            timeslot,
-            dateString
-        });
-        return true;
+        return this.getTimeslotUnavailableReason(timeslot, date) === null;
     }
 
     /**
@@ -996,10 +929,12 @@ class SessionManager {
             excessiveLogSessionManager('SessionManager.validateSelection checking date availability', {
                 date: serializeSessionManagerDate(date)
             });
-            if (!this.isDateAvailable(date)) {
-                conflicts.push(`Date ${DateManager.toYYYYMMDD(date)} is no longer available.`);
+            const dateConflict = this.getDateUnavailableReason(date);
+            if (dateConflict) {
+                conflicts.push(dateConflict);
                 excessiveLogSessionManager('SessionManager.validateSelection found unavailable date conflict', {
                     date: serializeSessionManagerDate(date),
+                    dateConflict,
                     conflicts
                 });
             }
@@ -1012,11 +947,13 @@ class SessionManager {
                 selectedTimeslot: this.selectedTimeslot,
                 firstSessionDate: serializeSessionManagerDate(firstSessionDate)
             });
-            if (!this.isTimeslotAvailable(this.selectedTimeslot, firstSessionDate)) {
-                conflicts.push(`Timeslot ${this.selectedTimeslot} on ${DateManager.toYYYYMMDD(firstSessionDate)} is no longer available.`);
+            const timeslotConflict = this.getTimeslotUnavailableReason(this.selectedTimeslot, firstSessionDate);
+            if (timeslotConflict) {
+                conflicts.push(timeslotConflict);
                 excessiveLogSessionManager('SessionManager.validateSelection found timeslot conflict', {
                     selectedTimeslot: this.selectedTimeslot,
                     firstSessionDate: serializeSessionManagerDate(firstSessionDate),
+                    timeslotConflict,
                     conflicts
                 });
             }

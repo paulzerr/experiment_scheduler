@@ -664,13 +664,16 @@ elements.submitButton.addEventListener('click', async () => {
         const validation = sessionManager.validateSelection();
         excessiveLogScript('submitButton click handler validation result', validation);
         if (!validation.isValid) {
-            const errorMessage = "Our apologies, it appears that while you were filling in the dates, someone else already submitted their answers, and some of these dates are now no longer available. The page will now refresh and you will see the currently available dates.";
-            excessiveLogScript('submitButton click handler validation failed; scheduling page reload', {
+            const errorMessage = formatValidationErrors(validation.conflicts);
+            excessiveLogScript('submitButton click handler validation failed', {
                 errorMessage,
                 conflicts: validation.conflicts
             });
             showError(errorMessage);
-            setTimeout(() => window.location.reload(), 5000); // Refresh after 5 seconds
+            setSubmissionStatus('Submission could not be completed. Please review the message above and update your selection.', 'error');
+            elements.submitButton.disabled = false;
+            elements.reviewButton.disabled = false;
+            updateCalendars();
             return;
         }
 
@@ -882,6 +885,17 @@ function hideLoading() {
     excessiveLogScript('hideLoading updated loading status visibility', {
         loadingStatusClassList: elements.loadingStatus.className
     });
+}
+
+function formatValidationErrors(conflicts) {
+    if (!conflicts || conflicts.length === 0) {
+        return 'Your selection could not be submitted. Please review your dates and timeslot and try again.';
+    }
+    if (conflicts.length === 1) {
+        return conflicts[0];
+    }
+    return 'Your selection could not be submitted:\n\n' +
+        conflicts.map((conflict, index) => `${index + 1}. ${conflict}`).join('\n\n');
 }
 
 function showError(message, element = elements.errorMessages) {
