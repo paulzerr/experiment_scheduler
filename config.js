@@ -58,9 +58,7 @@ const SCHEDULER_CONFIG = {
     
     // Time slot options for instruction sessions
     TIME_SLOTS: [
-        '11:00',
-        '13:30',
-        '17:00',
+        '13:00',
     ],
 
     // Instruction-session weekdays that should be blocked
